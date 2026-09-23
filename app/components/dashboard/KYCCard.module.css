@@ -1,0 +1,111 @@
+.card {
+  background-color: #FFFFFF;
+  border-radius: 20px;
+  padding: 14px 16px;
+  border: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.card:hover {
+  border-color: #D1D5DB;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.headerInfo {
+  min-width: 0;
+  flex: 1;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1E293B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.2px;
+  margin: 0;
+  transition: color 150ms ease;
+}
+
+.card:hover .title {
+  color: #FD5E53;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.badge {
+  background-color: #FDEAE8;
+  color: #E04F47;
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  line-height: 1.2;
+}
+
+.bullet {
+  color: #D1D5DB;
+  font-size: 10px;
+}
+
+.timeAgo {
+  color: #9CA3AF;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid #F3F4F6;
+}
+
+.docStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6B7280;
+}
+
+.docIcon {
+  width: 14px;
+  height: 14px;
+  color: #9CA3AF;
+}
+
+.docText {
+  font-size: 11px;
+  font-weight: 500;
+  color: #4B5563;
+}
+
+.chevronIcon {
+  width: 16px;
+  height: 16px;
+  color: #D1D5DB;
+  transition: transform 150ms ease, color 150ms ease;
+}
+
+.card:hover .chevronIcon {
+  color: #6B7280;
+  transform: translateX(2px);
+}

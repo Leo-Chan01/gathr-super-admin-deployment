@@ -1,9 +1,21 @@
 .dashboard {
-        display: flex;
-        min-height: 100vh;
+  display: flex;
+  min-height: 100vh;
+  background-color: #F8F9FA;
 }
 
 .content {
-        flex: 1;
-        padding: 24px;
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1024px) {
+  .content {
+    padding: 28px;
+  }
 }

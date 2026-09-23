@@ -1,0 +1,100 @@
+.header {
+  width: 100%;
+  border-radius: 16px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  box-sizing: border-box;
+}
+
+.rightControls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.searchContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchInput {
+  width: 220px;
+  padding: 6px 36px 6px 14px;
+  background-color: #E5E5E5;
+  border-radius: 12px;
+  height: 37px;
+  font-size: 12px;
+  color: #1F2937;
+  outline: none;
+  transition: all 150ms ease;
+  font-family: inherit;
+}
+
+.searchInput::placeholder {
+  color: #7A7D80;
+}
+
+.searchInput:focus {
+  border-color: #FD5E53;
+  box-shadow: 0 0 0 1px #FD5E53;
+}
+
+.searchIcon {
+  width: 14px;
+  height: 14px;
+  color: #9CA3AF;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.notificationButton {
+  position: relative;
+  padding: 6px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 150ms ease;
+}
+
+.notificationButton:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.bellIcon {
+  width: 16px;
+  height: 16px;
+  color: #4B5563;
+}
+
+.badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  background-color: #FD5E53;
+  color: #FFFFFF;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ECEEF2;
+}
+
+@media (min-width: 768px) {
+  .searchInput {
+    width: 256px;
+  }
+}

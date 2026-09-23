@@ -4,6 +4,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './Sidebar.module.css'
+import Image from 'next/image';
+import appLogo from '@/public/images/gathr-logo(light).png';
 
 interface NavigationTileItem {
         name: string
@@ -26,24 +28,31 @@ const SideBar = () => {
 
         return (
                 <aside className={styles.aside}>
-                        <div className={styles.logo}>
-                                Gathr
-                        </div>
-                        <nav className={styles.navigation}>
-
+                        <Image src={appLogo} alt={'Gathr Logo'} className={styles.logo} />
+                        <div className={styles.email}> email@gmail.com</div>
+                        <nav className={styles.navigationItems}>
                                 {navigationTileItems.map((navigationTileItem) => (
-
                                         <Link
                                                 key={navigationTileItem.href}
                                                 href={navigationTileItem.href}
                                                 className={`${styles.link} ${pathname === navigationTileItem.href ? styles.active : ""}`}>
                                                 {navigationTileItem.name}
-
                                         </Link>
                                 ))}
                         </nav>
                         <div className={styles.dashboardFooter}>
-                                Profile
+                                <div>
+                                        <div>Settings</div>
+                                        <div>
+                                                <div>
+                                                        Slyvester John
+                                                </div>
+                                                <div>
+                                                        Admin
+                                                </div>
+                                        </div>
+                                </div>
+                                <div className={styles.logoutTextButton}>Log out</div>
                         </div>
                 </aside >
         )

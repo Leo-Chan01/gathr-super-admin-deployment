@@ -1,30 +1,29 @@
 .container {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: #EFF5D5;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background-color: #FAF7EB;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border: 1px solid #E1EDB7;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
 }
 
 .svgIcon {
-  width: 22px;
-  height: 22px;
-  color: #5B732B;
+  width: 32px;
+  height: 32px;
 }
 
 @media (min-width: 640px) {
   .container {
-    width: 40px;
-    height: 40px;
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
   }
 
   .svgIcon {
-    width: 24px;
-    height: 24px;
+    width: 34px;
+    height: 34px;
   }
 }
+

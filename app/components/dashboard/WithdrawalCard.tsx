@@ -55,7 +55,7 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({ item, onView }) 
         <div className={styles.detailRow}>
           <Landmark className={styles.bankIcon} />
           <span className={styles.bankText}>
-            {item.bankName} • •••• {item.accountLast4}
+            {item.bankName} • ••••• {item.accountLast4}
           </span>
         </div>
 
@@ -63,7 +63,7 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({ item, onView }) 
         <div className={styles.detailRow}>
           <ShieldCheck className={styles.walletIcon} />
           <span className={styles.walletText}>
-            {item.walletType} • {item.campaignName}
+            {item.walletType} · {item.campaignName}
           </span>
         </div>
       </div>
@@ -87,3 +87,4 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({ item, onView }) 
 }
 
 export default WithdrawalCard
+

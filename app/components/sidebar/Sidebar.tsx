@@ -5,7 +5,7 @@ import Link from 'next/link'
 import styles from './Sidebar.module.css'
 import { usePathname } from 'next/navigation'
 import appLogo from '@/public/images/gathr-logo(light).png'
-// import BellIcon from '../dashboard/icons/BellIcons.';
+import { useSidebar } from '../../context/SidebarContext'
 
 import {
   LayoutDashboard,
@@ -16,7 +16,8 @@ import {
   Bell,
   Headphones,
   Settings,
-  LogOut
+  LogOut,
+  X
 } from 'lucide-react'
 
 import Image from 'next/image'
@@ -40,60 +41,86 @@ const navigationTileItems: NavigationTileItem[] = [
 
 const SideBar = () => {
   const pathname = usePathname()
+  const { isOpen, closeSidebar } = useSidebar()
 
   return (
-    <aside className={styles.aside}>
-      <div>
-        <div className={styles.brandHeader}>
-          <Image src={appLogo} alt='Gathr Logo' className={styles.logo} width={70} />
-          <div className={styles.email}>sammy@gmail.com</div>
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div
+          className={styles.backdrop}
+          onClick={closeSidebar}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside className={`${styles.aside} ${isOpen ? styles.asideMobileOpen : ''}`}>
+        <div>
+          <div className={styles.brandHeader}>
+            <div className={styles.brandLeft}>
+              <Image src={appLogo} alt='Gathr Logo' className={styles.logo} width={70} />
+              <div className={styles.email}>sammy@gmail.com</div>
+            </div>
+
+            {/* Mobile Close Button */}
+            <button
+              type="button"
+              className={styles.mobileCloseButton}
+              onClick={closeSidebar}
+              aria-label="Close menu"
+            >
+              <X className={styles.closeIcon} />
+            </button>
+          </div>
+
+          {/* Navigation Links */}
+          <nav className={styles.navigationItems}>
+            {navigationTileItems.map((item) => {
+              const Icon = item.icon
+              const isActive = pathname === item.href || (item.href === '/dashboard' && pathname === '/')
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeSidebar}
+                  className={`${styles.link} ${isActive ? styles.linkActive : ''}`}
+                >
+                  <div className={styles.linkContent}>
+                    <Icon className={`${styles.icon} ${isActive ? styles.iconActive : ''}`} />
+                    <span>{item.name}</span>
+                  </div>
+                </Link>
+              )
+            })}
+          </nav>
         </div>
 
-        {/* Navigation Links */}
-        <nav className={styles.navigationItems}>
-          {navigationTileItems.map((item) => {
-            const Icon = item.icon
-            const isActive = pathname === item.href || (item.href === '/dashboard' && pathname === '/')
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`${styles.link} ${isActive ? styles.linkActive : ''}`}
-              >
-                <div className={styles.linkContent}>
-                  <Icon className={`${styles.icon} ${isActive ? styles.iconActive : ''}`} />
-                  <span>{item.name}</span>
-                </div>
-              </Link>
-            )
-          })}
-        </nav>
-      </div>
-
-      {/* Bottom User Profile Section */}
-      <div className={styles.dashboardFooter}>
-        <div className={styles.userProfile}>
-          <div className={styles.avatarContainer}>
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Sylvester John"
-              className={styles.avatarImage}
-            />
+        {/* Bottom User Profile Section */}
+        <div className={styles.dashboardFooter}>
+          <div className={styles.userProfile}>
+            <div className={styles.avatarContainer}>
+              <img
+                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+                alt="Sylvester John"
+                className={styles.avatarImage}
+              />
+            </div>
+            <div>
+              <p className={styles.userName}>Sylvester John</p>
+              <span className={styles.adminBadge}>Admin</span>
+            </div>
           </div>
-          <div>
-            <p className={styles.userName}>Sylvester John</p>
-            <span className={styles.adminBadge}>Admin</span>
-          </div>
+
+          <button type="button" className={styles.logoutButton}>
+            <LogOut className={styles.logoutIcon} />
+            <span>Log out</span>
+          </button>
         </div>
-
-        <button type="button" className={styles.logoutButton}>
-          <LogOut className={styles.logoutIcon} />
-          <span>Log out</span>
-        </button>
-      </div>
-    </aside>
+      </aside>
+    </>
   )
 }
 
 export default SideBar
+

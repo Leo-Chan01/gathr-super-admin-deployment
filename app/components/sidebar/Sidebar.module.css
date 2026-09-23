@@ -1,30 +1,52 @@
-/* .aside {
-  width: 260px;
-  min-height: 100vh;
-  background-color: #F0F2F5;
-  border-right: 1px solid #E5E7EB;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 16px;
-  flex-shrink: 0;
-} */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 999;
+  animation: fadeIn 150ms ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 
 .aside {
-        margin: 20;
-        width: 380px;
-        justify-content: space-between;
-        height: calc(100vh-40);
-        display: flex;
-        border-radius: 1rem;
-        padding-left: 16px;
-        background: #C4C4C438;
-        flex-direction: column;
+  margin-right: 40px;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  margin-left: 20px;
+  width: 300px;
+  min-width: 300px;
+  justify-content: space-between;
+  height: calc(100vh - 60px);
+  display: flex;
+  border-radius: 1rem;
+  padding-left: 16px;
+  background: #C4C4C438;
+  flex-direction: column;
+  position: sticky;
+  top: 30px;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .brandHeader {
   padding: 8px 12px 20px 12px;
   border-bottom: 1px solid #E3E3E3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brandLeft {
+  display: flex;
+  flex-direction: column;
 }
 
 .logo {
@@ -45,6 +67,24 @@
   font-weight: 500;
 }
 
+.mobileCloseButton {
+  display: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #E5E7EB;
+  background: #FFFFFF;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #374151;
+}
+
+.closeIcon {
+  width: 16px;
+  height: 16px;
+}
+
 .navigationItems {
   margin-top: 20px;
   display: flex;
@@ -54,7 +94,7 @@
 
 .link {
   display: flex;
-  align-items: center;
+  align-items: right;
   justify-content: space-between;
   padding: 10px 14px;
   border-top-left-radius: 8px;
@@ -73,7 +113,7 @@
   border-top-left-radius: 8px;
   border-bottom-left-radius: 8px;
   border-right-color: #FD5E53;
-  border-right-width: 4;
+  border-right-width: 4px;
   color: #024057;
 }
 
@@ -82,7 +122,7 @@
   border-top-left-radius: 8px;
   border-bottom-left-radius: 8px;
   border-right-color: #FD5E53;
-  border-right-width: 4;
+  border-right-width: 4px;
   color: #1E293B;
   font-weight: 600;
 }
@@ -179,8 +219,29 @@
   color: #FD5E53;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1023px) {
   .aside {
-    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh;
+    width: 280px;
+    min-width: 280px;
+    margin: 0;
+    border-radius: 0 16px 16px 0;
+    background-color: #FFFFFF;
+    z-index: 1000;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+    transform: translateX(-100%);
+    transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .asideMobileOpen {
+    transform: translateX(0);
+  }
+
+  .mobileCloseButton {
+    display: flex;
   }
 }

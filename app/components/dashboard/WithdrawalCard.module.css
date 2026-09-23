@@ -1,19 +1,16 @@
 .card {
-  background-color: #FFFFFF;
-  border-radius: 20px;
-  padding: 16px 20px;
-  border: 1px solid #E5E7EB;
+  border-radius: 28px;
+  padding: 16px 20px 18px 20px;
+  border: 0.5px solid #1F1F1F8C;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 16px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  gap: 14px;
   transition: all 150ms ease;
 }
 
 .card:hover {
-  border-color: #D1D5DB;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
+  border-color: #1F1F1F;
 }
 
 .header {
@@ -25,16 +22,19 @@
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
   min-width: 0;
 }
 
 .headerInfo {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .title {
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   color: #1E293B;
   white-space: nowrap;
@@ -52,41 +52,41 @@
 .metaRow {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 3px;
+  gap: 8px;
 }
 
 .badge {
-  background-color: #FDEAE8;
-  color: #E04F47;
-  font-size: 9.5px;
-  font-weight: 600;
-  padding: 2px 8px;
+  background-color: #FDF0ED;
+  color: #71717A;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 10px;
   border-radius: 9999px;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .bullet {
-  color: #D1D5DB;
+  color: #1E293B;
   font-size: 10px;
 }
 
 .timeAgo {
-  color: #9CA3AF;
-  font-size: 10.5px;
+  color: #71717A;
+  font-size: 13px;
   white-space: nowrap;
+  font-weight: 400;
 }
 
 .chevronIcon {
-  width: 16px;
-  height: 16px;
-  color: #D1D5DB;
+  width: 20px;
+  height: 20px;
+  color: #71717A;
   flex-shrink: 0;
   transition: transform 150ms ease, color 150ms ease;
 }
 
 .card:hover .chevronIcon {
-  color: #6B7280;
+  color: #1E293B;
   transform: translateX(2px);
 }
 
@@ -94,71 +94,70 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-top: 2px;
 }
 
 .detailRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
 .amountIcon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   color: #FD5E53;
+  flex-shrink: 0;
 }
 
 .amountValue {
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 700;
   color: #1E293B;
   letter-spacing: -0.3px;
 }
 
 .bankIcon {
-  width: 14px;
-  height: 14px;
-  color: #9CA3AF;
+  width: 16px;
+  height: 16px;
+  color: #64748B;
+  flex-shrink: 0;
 }
 
 .bankText {
-  font-size: 12px;
-  color: #4B5563;
-  font-weight: 400;
+  font-size: 14px;
+  color: #475569;
+  font-weight: 500;
 }
 
 .walletIcon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   color: #0D9488;
   flex-shrink: 0;
 }
 
 .walletText {
-  font-size: 12px;
-  color: #6B7280;
+  font-size: 13.5px;
+  color: #475569;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .actionRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 10px;
-  border-top: 1px solid #F3F4F6;
+  margin-top: 2px;
 }
 
 .thumbnailContainer {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   overflow: hidden;
-  border: 1px solid #E5E7EB;
   flex-shrink: 0;
 }
 
@@ -166,25 +165,30 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .viewButton {
-  padding: 6px 22px;
+  padding: 9px 38px;
   border-radius: 9999px;
   border: 1px solid #FD5E53;
-  color: #FD5E53;
+  color: #1E293B;
   background-color: transparent;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease;
+  font-family: inherit;
+  line-height: 1.2;
 }
 
 .viewButton:hover {
-  background-color: #FD5E53;
-  color: #FFFFFF;
+  border-color: #E0483E;
+  background-color: rgba(253, 94, 83, 0.05);
+  transform: translateY(-1px);
 }
 
 .viewButton:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
+

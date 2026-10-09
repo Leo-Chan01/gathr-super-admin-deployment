@@ -1,9 +1,8 @@
 import React from 'react'
+import FeedBoard from '../components/gathr-feed/FeedBoard'
 
-const GathrFeed = () => {
-        return (
-                <div>GathrFeed</div>
-        )
+const GathrFeedPage = () => {
+  return <FeedBoard />
 }
 
-export default GathrFeed
+export default GathrFeedPage

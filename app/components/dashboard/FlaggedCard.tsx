@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import Image from 'next/image'
 import { X } from 'lucide-react'
 import AvatarIllustration from './AvatarIllustration'
 import styles from './FlaggedCard.module.css'
@@ -47,9 +48,11 @@ export const FlaggedCard: React.FC<FlaggedCardProps> = ({
       <div className={styles.topSection}>
         <div className={styles.avatarContainer}>
           {item.avatarUrl ? (
-            <img
+            <Image
               src={item.avatarUrl}
               alt={username}
+              width={44}
+              height={44}
               className={styles.avatarImage}
             />
           ) : (
@@ -81,9 +84,11 @@ export const FlaggedCard: React.FC<FlaggedCardProps> = ({
       {/* Middle Quoted Content Card */}
       <div className={styles.quotedContainer}>
         <div className={styles.quotedImageContainer}>
-          <img
+          <Image
             src={targetImage}
             alt={item.targetTitle}
+            width={76}
+            height={76}
             className={styles.quotedImage}
           />
         </div>

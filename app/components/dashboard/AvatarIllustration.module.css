@@ -27,3 +27,26 @@
   }
 }
 
+.compact {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+.compact .svgIcon {
+  width: 22px;
+  height: 22px;
+}
+
+.round {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #f7f4ec;
+}
+
+.round .svgIcon {
+  width: 22px;
+  height: 22px;
+}
+

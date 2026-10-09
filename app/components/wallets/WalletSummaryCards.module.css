@@ -1,0 +1,110 @@
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  padding-top: 28px;
+}
+
+.card {
+  position: relative;
+  overflow: visible;
+  border-radius: 22px;
+  min-height: 156px;
+  padding: 32px 132px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+}
+
+.balanceCard {
+  background-color: #f7c5c0;
+  background-image: repeating-linear-gradient(
+    -28deg,
+    rgba(255, 255, 255, 0.34) 0 11px,
+    rgba(214, 120, 116, 0.16) 11px 12px
+  );
+}
+
+.payoutsCard {
+  background-color: #e8eef6;
+  background-image: repeating-linear-gradient(
+    -28deg,
+    rgba(255, 255, 255, 0.7) 0 11px,
+    rgba(176, 194, 216, 0.35) 11px 12px
+  );
+}
+
+.badge {
+  align-self: flex-start;
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #8b919a;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.value {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  color: #1a1a1a;
+  letter-spacing: -0.8px;
+  line-height: 1;
+}
+
+.balanceArt,
+.payoutArt {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  object-fit: contain;
+}
+
+.balanceArt {
+  width: 124px;
+  height: 124px;
+  top: -34px;
+  right: 6px;
+}
+
+.payoutArt {
+  width: 112px;
+  height: 112px;
+  top: -30px;
+  right: -4px;
+}
+
+@media (min-width: 800px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .card {
+    min-height: 172px;
+    padding: 36px 150px 36px 32px;
+  }
+
+  .value {
+    font-size: 34px;
+  }
+
+  .balanceArt {
+    width: 138px;
+    height: 138px;
+    top: -40px;
+    right: 10px;
+  }
+
+  .payoutArt {
+    width: 124px;
+    height: 124px;
+    top: -36px;
+    right: 2px;
+  }
+}

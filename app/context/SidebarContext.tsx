@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState } from 'react'
 import { usePathname } from 'next/navigation'
 
 interface SidebarContextType {
@@ -20,11 +20,12 @@ const SidebarContext = createContext<SidebarContextType>({
 export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
+  const [prevPathname, setPrevPathname] = useState(pathname)
 
-  // Close sidebar on mobile whenever the route changes
-  useEffect(() => {
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname)
     setIsOpen(false)
-  }, [pathname])
+  }
 
   const toggleSidebar = () => setIsOpen((prev) => !prev)
   const closeSidebar = () => setIsOpen(false)

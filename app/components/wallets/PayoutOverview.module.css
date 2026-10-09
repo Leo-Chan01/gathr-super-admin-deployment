@@ -1,0 +1,197 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rangeWrap {
+  position: relative;
+}
+
+.rangeButton,
+.statementButton,
+.disbursalButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rangeButton,
+.statementButton {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #3a3c3d;
+}
+
+.rangeButton:hover,
+.statementButton:hover {
+  background: #f8f8f8;
+}
+
+.disbursalButton {
+  border: none;
+  background: #fd5e53;
+  color: #ffffff;
+}
+
+.disbursalButton:hover {
+  background: #f04d42;
+}
+
+.toolbarIcon {
+  width: 15px;
+  height: 15px;
+}
+
+.toolbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.rangeMenu {
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 180px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #eceff3;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+.rangeOption {
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: #3a3c3d;
+  cursor: pointer;
+}
+
+.rangeOption:hover,
+.rangeOptionActive {
+  background: #f6f7f9;
+}
+
+.overviewHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #1a1a1a;
+  letter-spacing: -0.3px;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #9aa0a6;
+}
+
+.overviewTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dotAmount {
+  background: #ef4444;
+}
+
+.dotTransactions {
+  background: #5b8def;
+}
+
+.legendMuted {
+  opacity: 0.35;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #eef1f4;
+}
+
+.toggle button {
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #8b919a;
+  cursor: pointer;
+}
+
+.toggleActive {
+  background: #ffffff;
+  color: #1a1a1a;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.chart {
+  width: 100%;
+  height: 280px;
+}
+
+.chart > div:first-child:not(:last-child) {
+  display: none !important;
+}

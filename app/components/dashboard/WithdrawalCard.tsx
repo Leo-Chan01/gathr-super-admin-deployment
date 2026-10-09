@@ -1,29 +1,33 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { Landmark, ShieldCheck, ChevronRight, Banknote } from 'lucide-react'
-import AvatarIllustration from './AvatarIllustration'
-import styles from './WithdrawalCard.module.css'
+import React from "react";
+import Image from "next/image";
+import { Landmark, ShieldCheck, ChevronRight, Banknote } from "lucide-react";
+import AvatarIllustration from "./AvatarIllustration";
+import styles from "./WithdrawalCard.module.css";
 
 export interface WithdrawalItem {
-  id: string | number
-  name: string
-  category: string
-  timeAgo: string
-  amount: string
-  bankName: string
-  accountLast4: string
-  walletType: string
-  campaignName: string
-  thumbnailUrl: string
+  id: string | number;
+  name: string;
+  category: string;
+  timeAgo: string;
+  amount: string;
+  bankName: string;
+  accountLast4: string;
+  walletType: string;
+  campaignName: string;
+  thumbnailUrl: string;
 }
 
 interface WithdrawalCardProps {
-  item: WithdrawalItem
-  onView?: () => void
+  item: WithdrawalItem;
+  onView?: () => void;
 }
 
-export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({ item, onView }) => {
+export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({
+  item,
+  onView,
+}) => {
   return (
     <div className={styles.card}>
       {/* Top Header Row */}
@@ -71,9 +75,11 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({ item, onView }) 
       {/* Bottom Action Row */}
       <div className={styles.actionRow}>
         <div className={styles.thumbnailContainer}>
-          <img
+          <Image
             src={item.thumbnailUrl}
             alt={item.campaignName}
+            width={48}
+            height={48}
             className={styles.thumbnailImage}
           />
         </div>
@@ -83,8 +89,7 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({ item, onView }) 
         </button>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default WithdrawalCard
-
+export default WithdrawalCard;

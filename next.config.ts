@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-        /* config options here */
+  images: {
+    // Feed and dashboard photos are already sized Unsplash URLs.
+    unoptimized: true
+  }
 };
 
 export default nextConfig;

@@ -161,7 +161,7 @@ export const AttentionNeeded: React.FC = () => {
     setKycList((prev) => prev.filter((k) => k.id !== item.id))
   }
 
-  const handleRejectKYC = (item: KYCItem, _reason: string) => {
+  const handleRejectKYC = (item: KYCItem) => {
     setKycList((prev) => prev.filter((k) => k.id !== item.id))
   }
 

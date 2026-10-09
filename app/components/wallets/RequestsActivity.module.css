@@ -1,0 +1,292 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px 28px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #1a1a1a;
+  letter-spacing: -0.3px;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #9aa0a6;
+}
+
+.tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 28px;
+}
+
+.tab {
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  padding: 4px 0 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: #b0b4ba;
+  cursor: pointer;
+}
+
+.tabActive {
+  color: #1a1a1a;
+  border-bottom-color: #fd5e53;
+}
+
+.rangeRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.rangeWrap {
+  position: relative;
+}
+
+.rangeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid #e6e6e6;
+  background: #ffffff;
+  color: #3a3c3d;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rangeButton:hover {
+  background: #fafafa;
+}
+
+.rangeIcon {
+  width: 15px;
+  height: 15px;
+}
+
+.rangeMenu {
+  position: absolute;
+  z-index: 4;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #eceff3;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+.rangeOption {
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  color: #3a3c3d;
+  cursor: pointer;
+}
+
+.rangeOption:hover,
+.rangeOptionActive {
+  background: #f6f7f9;
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.groupLabel {
+  margin: 0 0 10px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #b0b4ba;
+}
+
+.dayCard {
+  border: 1px solid #efeae7;
+  border-radius: 22px;
+  background: #ffffff;
+  padding: 4px 18px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 6px;
+  border-bottom: 1px solid #f1eeec;
+}
+
+.dayCard .row:last-child {
+  border-bottom: none;
+}
+
+.rowLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.rowName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.amount {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.debit {
+  color: #f05a4e;
+}
+
+.credit {
+  color: #1f9d55;
+}
+
+.empty {
+  margin: 8px 0;
+  font-size: 13px;
+  color: #9aa0a6;
+}
+
+.requestGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.footer,
+.historyPager {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.historyPager {
+  justify-content: flex-end;
+}
+
+.footer {
+  justify-content: space-between;
+}
+
+.showingText {
+  font-size: 13px;
+  color: #9aa0a6;
+  font-weight: 500;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  margin-top: 0;
+}
+
+.pageStep,
+.pageNumber {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #9aa0a6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pageStep:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pageNumber:hover,
+.pageStep:hover:not(:disabled) {
+  background: #f6f7f9;
+}
+
+.pageActive {
+  background: #fd5e53;
+  color: #ffffff;
+}
+
+.pageActive:hover {
+  background: #fd5e53;
+}
+
+@media (max-width: 720px) {
+  .tabs {
+    gap: 18px;
+  }
+
+  .rangeRow {
+    justify-content: flex-start;
+  }
+
+  .dayCard {
+    padding: 4px 10px;
+  }
+
+  .footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (min-width: 800px) {
+  .requestGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .requestGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

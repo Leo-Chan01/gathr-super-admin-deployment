@@ -409,6 +409,7 @@
 .rowMenuList {
   top: calc(100% + 4px);
   right: 0;
+  z-index: 30;
 }
 
 .menuItem {
@@ -782,15 +783,34 @@
 }
 
 .thread {
+  position: relative;
+  z-index: 1;
   list-style: none;
 }
 
-.threadBlock {
+.thread:has(.rowMenuList) {
+  z-index: 6;
+}
+
+.threadBlock,
+.commentBranch {
   --spine-x: 17px;
   --reply-indent: 46px;
   --thread-gap: 18px;
+  position: relative;
   display: flex;
   flex-direction: column;
+}
+
+.commentBranchReply {
+  margin-left: var(--reply-indent);
+}
+
+.commentBranch:has(.rowMenuList),
+.commentMain:has(.rowMenuList),
+.comment:has(.rowMenuList) {
+  position: relative;
+  z-index: 4;
 }
 
 .commentMain {
@@ -799,7 +819,7 @@
 
 .comment {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 10px;
   animation: nodeIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -809,17 +829,18 @@
 }
 
 .commentReply {
-  margin-left: var(--reply-indent);
+  position: relative;
 }
 
 .commentRail {
   position: relative;
   width: 36px;
   flex-shrink: 0;
+  align-self: stretch;
   overflow: visible;
 }
 
-.commentRoot .commentRail::after {
+.comment .commentRail::after {
   content: '';
   position: absolute;
   left: var(--spine-x);
@@ -830,11 +851,15 @@
   pointer-events: none;
   transform-origin: top;
   transform: scaleY(0);
-  transition: transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.threadBlockOpen .commentRoot .commentRail::after {
+.commentBranchOpen > .comment .commentRail::after {
   transform: scaleY(1);
+}
+
+.commentBranchOpen:has(.replyTree) > .comment .commentRail::after {
+  height: calc(100% - 36px + var(--thread-gap) + 20px);
 }
 
 .replyCollapse {
@@ -863,6 +888,10 @@
   overflow: hidden;
 }
 
+.replyCollapseInner:has(.rowMenuList) {
+  overflow: visible;
+}
+
 .replyTree {
   position: relative;
   display: flex;
@@ -870,12 +899,12 @@
   gap: var(--thread-gap);
 }
 
-.replyTree::before {
+.replyTree > .commentBranch:not(:last-child)::before {
   content: '';
   position: absolute;
-  left: var(--spine-x);
-  top: 0;
-  bottom: var(--spine-trim, 18px);
+  left: calc(var(--reply-indent) * -1 + var(--spine-x));
+  top: 18px;
+  bottom: calc((var(--thread-gap) + 20px) * -1);
   width: 1.5px;
   background: #d4d4d8;
   pointer-events: none;
@@ -883,6 +912,10 @@
 
 .replyTree .comment {
   animation: none;
+}
+
+.replyCollapseOpen > .replyCollapseInner > .replyTree > .commentBranch > .comment {
+  animation: nodeIn 0.46s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .replyHook {
@@ -934,6 +967,25 @@
   color: #3f3f46;
 }
 
+.commentOpenable {
+  cursor: pointer;
+}
+
+.commentTextButton {
+  display: block;
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #3f3f46;
+  text-align: left;
+  cursor: pointer;
+}
+
 .commentActions {
   display: flex;
   align-items: center;
@@ -966,6 +1018,70 @@
 }
 
 .commentStatsSegment:disabled {
+  cursor: default;
+}
+
+.replyButton {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #9ca3af;
+  cursor: pointer;
+}
+
+.replyButton:hover,
+.replyButtonActive {
+  color: #1e293b;
+}
+
+.replyForm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  margin-left: var(--reply-indent);
+}
+
+.replyCollapseOpen .replyForm {
+  animation: nodeIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.replyInput {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid #e6e6ea;
+  background: #ffffff;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #1e293b;
+  outline: none;
+}
+
+.replyInput:focus {
+  border-color: #1e293b;
+}
+
+.replySubmit {
+  height: 40px;
+  border: none;
+  border-radius: 999px;
+  padding: 0 14px;
+  background: #ff6458;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.replySubmit:disabled {
+  opacity: 0.45;
   cursor: default;
 }
 
@@ -1743,8 +1859,10 @@
   .feed,
   .comment,
   .replyHook,
-  .threadBlockOpen .commentRoot .commentRail::after,
-  .replyTree::before,
+  .commentBranchOpen > .comment .commentRail::after,
+  .replyTree > .commentBranch:not(:last-child)::before,
+  .replyForm,
+  .replyCollapseOpen > .replyCollapseInner > .replyTree > .commentBranch > .comment,
   .photoCurrent,
   .photoLeaving,
   .crumb,
@@ -1768,7 +1886,8 @@
   .railDetail,
   .replyCollapse,
   .replyCollapseOpen,
-  .commentRoot .commentRail::after,
+  .comment .commentRail::after,
+  .replyButton,
   .dot {
     transition: none;
   }

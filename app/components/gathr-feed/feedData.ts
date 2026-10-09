@@ -39,8 +39,9 @@ export interface FeedReply {
   body: string
   likes: number
   liked: boolean
-  /** Shown in the reply pill; defaults to 0 */
+  /** Shown in the reply pill; defaults to nested replies */
   replyCount?: number
+  replies?: FeedReply[]
 }
 
 export interface FeedComment {

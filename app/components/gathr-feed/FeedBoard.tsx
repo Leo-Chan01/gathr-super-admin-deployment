@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -31,6 +31,7 @@ import {
   type ActivityItem,
   type BroadcastAudience,
   type FeedComment,
+  type FeedReply,
   type FeedPost,
   type UserProfile,
   type FeedTab,
@@ -124,6 +125,7 @@ interface PostDetailProps {
   onCommentLike: (id: string) => void
   onCommentMenu: (id: string) => void
   onHideComment: (id: string) => void
+  onAddReply: (parentId: string, text: string) => void
   onOpenProfile: (username: string) => void
   motion: 'enter' | 'forward' | 'back' | 'exit'
 }
@@ -138,41 +140,38 @@ interface CommentNode {
   liked: boolean
 }
 
+const youAvatar =
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80'
+
 const CommentStats: React.FC<{
   item: CommentNode
   replyCount: number
-  canToggleReplies: boolean
-  repliesOpen?: boolean
+  replying?: boolean
   onLike: () => void
-  onToggleReplies?: () => void
-}> = ({ item, replyCount, canToggleReplies, repliesOpen, onLike, onToggleReplies }) => (
-  <div className={styles.commentStatsPill}>
-    <button
-      type="button"
-      className={`${styles.commentStatsSegment} ${item.liked ? styles.commentStatsSegmentActive : ''}`}
-      aria-pressed={item.liked}
-      onClick={onLike}
-    >
-      <Heart className={`${styles.commentStatsIcon} ${item.liked ? styles.heartFilled : ''}`} />
-      {formatCount(item.likes)}
-    </button>
-    {replyCount > 0 && (
-      <>
-        <span className={styles.commentStatsDivider} aria-hidden />
-        <button
-          type="button"
-          className={styles.commentStatsSegment}
-          aria-expanded={canToggleReplies ? repliesOpen : undefined}
-          aria-label={`${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`}
-          disabled={!canToggleReplies}
-          onClick={onToggleReplies}
-        >
-          <MessageCircle className={styles.commentStatsIcon} />
-          {formatCount(replyCount)}
-        </button>
-      </>
-    )}
-  </div>
+  onReply?: () => void
+}> = ({ item, replyCount, replying, onLike, onReply }) => (
+    <div className={styles.commentStatsPill}>
+      <button
+        type="button"
+        className={`${styles.commentStatsSegment} ${item.liked ? styles.commentStatsSegmentActive : ''}`}
+        aria-pressed={item.liked}
+        onClick={onLike}
+      >
+        <Heart className={`${styles.commentStatsIcon} ${item.liked ? styles.heartFilled : ''}`} />
+        {formatCount(item.likes)}
+      </button>
+      <span className={styles.commentStatsDivider} aria-hidden />
+      <button
+        type="button"
+        className={`${styles.commentStatsSegment} ${replying ? styles.commentStatsSegmentActive : ''}`}
+        aria-expanded={replying}
+        aria-label={`Reply to ${item.username}`}
+        onClick={onReply}
+      >
+        <MessageCircle className={styles.commentStatsIcon} />
+        {replyCount > 0 ? formatCount(replyCount) : null}
+      </button>
+    </div>
 )
 
 const CommentRow: React.FC<{
@@ -184,7 +183,9 @@ const CommentRow: React.FC<{
   replyCount: number
   canToggleReplies?: boolean
   repliesOpen?: boolean
+  replying?: boolean
   onToggleReplies?: () => void
+  onReply?: () => void
   onOpenProfile: (username: string) => void
   onCommentLike: (id: string) => void
   onCommentMenu: (id: string) => void
@@ -198,15 +199,25 @@ const CommentRow: React.FC<{
   replyCount,
   canToggleReplies = false,
   repliesOpen,
+  replying,
   onToggleReplies,
+  onReply,
   onOpenProfile,
   onCommentLike,
   onCommentMenu,
   onHideComment
 }) => (
   <div
-    className={`${styles.comment} ${variant === 'reply' ? styles.commentReply : styles.commentRoot}`}
+    className={`${styles.comment} ${variant === 'reply' ? styles.commentReply : styles.commentRoot} ${
+      canToggleReplies ? styles.commentOpenable : ''
+    }`}
     style={{ animationDelay: `${delay}ms` }}
+    onClick={(event) => {
+      if (!canToggleReplies) return
+      const target = event.target as HTMLElement
+      if (target.closest('button, a, input, textarea, [data-menu-root]')) return
+      onToggleReplies?.()
+    }}
   >
     <div className={styles.commentRail}>
       {variant === 'reply' && (
@@ -231,15 +242,25 @@ const CommentRow: React.FC<{
         <span>·</span>
         <span>{item.time}</span>
       </p>
-      <p className={styles.commentText}>{item.body}</p>
+      {canToggleReplies ? (
+        <button
+          type="button"
+          className={styles.commentTextButton}
+          aria-expanded={repliesOpen}
+          onClick={onToggleReplies}
+        >
+          {item.body}
+        </button>
+      ) : (
+        <p className={styles.commentText}>{item.body}</p>
+      )}
       <div className={styles.commentActions}>
         <CommentStats
           item={item}
           replyCount={replyCount}
-          canToggleReplies={canToggleReplies}
-          repliesOpen={repliesOpen}
+          replying={replying}
           onLike={() => onCommentLike(item.id)}
-          onToggleReplies={onToggleReplies}
+          onReply={onReply}
         />
         <div className={styles.rowMenu} data-menu-root>
           <button
@@ -264,6 +285,145 @@ const CommentRow: React.FC<{
   </div>
 )
 
+const CommentBranch: React.FC<{
+  item: FeedComment | FeedReply
+  variant: 'root' | 'reply'
+  delay: number
+  menuId: string | null
+  replyingTo: string | null
+  openThreads: Record<string, boolean>
+  onToggleThread: (id: string) => void
+  onStartReply: (id: string) => void
+  onSubmitReply: (parentId: string, text: string) => void
+  onCancelReply: () => void
+  onOpenProfile: (username: string) => void
+  onCommentLike: (id: string) => void
+  onCommentMenu: (id: string) => void
+  onHideComment: (id: string) => void
+}> = ({
+  item,
+  variant,
+  delay,
+  menuId,
+  replyingTo,
+  openThreads,
+  onToggleThread,
+  onStartReply,
+  onSubmitReply,
+  onCancelReply,
+  onOpenProfile,
+  onCommentLike,
+  onCommentMenu,
+  onHideComment
+}) => {
+  const replies = item.replies ?? []
+  const replying = replyingTo === item.id
+  const wantsOpen = Boolean(openThreads[item.id]) || replying
+  const [entered, setEntered] = useState(false)
+  const [replyDraft, setReplyDraft] = useState('')
+  const replyInputRef = useRef<HTMLInputElement>(null)
+  if (!wantsOpen && entered) setEntered(false)
+
+  useEffect(() => {
+    if (!wantsOpen) return
+    const frame = requestAnimationFrame(() => setEntered(true))
+    return () => cancelAnimationFrame(frame)
+  }, [wantsOpen])
+
+  useEffect(() => {
+    if (!entered || !replying) return
+    replyInputRef.current?.focus()
+  }, [entered, replying])
+
+  const pillReplyCount = item.replyCount ?? replies.length
+
+  const submitReply = (event: React.FormEvent) => {
+    event.preventDefault()
+    const text = replyDraft.trim()
+    if (!text) return
+    onSubmitReply(item.id, text)
+    setReplyDraft('')
+  }
+
+  return (
+    <div
+      className={`${styles.commentBranch} ${variant === 'reply' ? styles.commentBranchReply : styles.threadBlock} ${
+        entered ? styles.commentBranchOpen : ''
+      }`}
+    >
+      <CommentRow
+        item={item}
+        variant={variant}
+        delay={delay}
+        hookDelay={0}
+        menuId={menuId}
+        replyCount={pillReplyCount}
+        canToggleReplies={replies.length > 0}
+        repliesOpen={entered && replies.length > 0}
+        replying={replying}
+        onToggleReplies={() => onToggleThread(item.id)}
+        onReply={() => {
+          onStartReply(item.id)
+          if (replying && entered) replyInputRef.current?.focus()
+        }}
+        onOpenProfile={onOpenProfile}
+        onCommentLike={onCommentLike}
+        onCommentMenu={onCommentMenu}
+        onHideComment={onHideComment}
+      />
+      <div
+        className={`${styles.replyCollapse} ${entered ? styles.replyCollapseOpen : ''}`}
+        inert={!entered}
+        aria-hidden={!entered}
+      >
+        <div className={styles.replyCollapseInner}>
+          {replies.length > 0 && (
+            <div className={styles.replyTree}>
+              {replies.map((reply, replyIndex) => (
+                <CommentBranch
+                  key={reply.id}
+                  item={reply}
+                  variant="reply"
+                  delay={replyIndex * 45}
+                  menuId={menuId}
+                  replyingTo={replyingTo}
+                  openThreads={openThreads}
+                  onToggleThread={onToggleThread}
+                  onStartReply={onStartReply}
+                  onSubmitReply={onSubmitReply}
+                  onCancelReply={onCancelReply}
+                  onOpenProfile={onOpenProfile}
+                  onCommentLike={onCommentLike}
+                  onCommentMenu={onCommentMenu}
+                  onHideComment={onHideComment}
+                />
+              ))}
+            </div>
+          )}
+          {replying && (
+            <form className={styles.replyForm} onSubmit={submitReply}>
+              <input
+                ref={replyInputRef}
+                className={styles.replyInput}
+                value={replyDraft}
+                placeholder={`Reply to ${item.username}`}
+                aria-label={`Reply to ${item.username}`}
+                onChange={(event) => setReplyDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') onCancelReply()
+                }}
+              />
+              <button type="submit" className={styles.replySubmit} disabled={!replyDraft.trim()}>
+                Reply
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const CommentThread: React.FC<{
   comments: FeedComment[]
   menuId: string | null
@@ -271,96 +431,46 @@ const CommentThread: React.FC<{
   onCommentMenu: (id: string) => void
   onHideComment: (id: string) => void
   onOpenProfile: (username: string) => void
-}> = ({ comments, menuId, onCommentLike, onCommentMenu, onHideComment, onOpenProfile }) => {
+  onAddReply: (parentId: string, text: string) => void
+}> = ({ comments, menuId, onCommentLike, onCommentMenu, onHideComment, onOpenProfile, onAddReply }) => {
   const [openThreads, setOpenThreads] = useState<Record<string, boolean>>({})
-  const replyTreeRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
 
-  const measureReplySpines = useCallback(() => {
-    replyTreeRefs.current.forEach((tree) => {
-      const last = tree.querySelector(`.${styles.commentReply}:last-child`) as HTMLElement | null
-      if (!last) {
-        tree.style.removeProperty('--spine-trim')
-        return
-      }
-      tree.style.setProperty('--spine-trim', `${Math.max(0, last.offsetHeight - 18)}px`)
-    })
-  }, [])
+  const toggleThread = (id: string) => {
+    const closing = Boolean(openThreads[id])
+    setOpenThreads((current) => ({ ...current, [id]: !current[id] }))
+    if (closing) {
+      setReplyingTo((current) => (current === id ? null : current))
+    }
+  }
 
-  useLayoutEffect(() => {
-    measureReplySpines()
-    window.addEventListener('resize', measureReplySpines)
-    return () => window.removeEventListener('resize', measureReplySpines)
-  }, [comments, openThreads, measureReplySpines])
+  const startReply = (id: string) => {
+    setReplyingTo(id)
+    setOpenThreads((current) => ({ ...current, [id]: true }))
+  }
 
   return (
     <ul className={styles.commentList}>
-      {comments.map((comment, index) => {
-        const hasReplies = comment.replies.length > 0
-        const open = Boolean(openThreads[comment.id]) && hasReplies
-        const pillReplyCount = comment.replyCount ?? comment.replies.length
-
-        return (
-          <li key={comment.id} className={styles.thread}>
-            <div className={`${styles.threadBlock} ${open ? styles.threadBlockOpen : ''}`}>
-              <div className={styles.commentMain}>
-                <CommentRow
-                  item={comment}
-                  variant="root"
-                  delay={index * 50}
-                  hookDelay={0}
-                  menuId={menuId}
-                  replyCount={pillReplyCount}
-                  canToggleReplies={hasReplies}
-                  repliesOpen={open}
-                  onToggleReplies={() =>
-                    setOpenThreads((current) => ({
-                      ...current,
-                      [comment.id]: !current[comment.id]
-                    }))
-                  }
-                  onOpenProfile={onOpenProfile}
-                  onCommentLike={onCommentLike}
-                  onCommentMenu={onCommentMenu}
-                  onHideComment={onHideComment}
-                />
-              </div>
-              {hasReplies && (
-                <div
-                  className={`${styles.replyCollapse} ${open ? styles.replyCollapseOpen : ''}`}
-                  inert={!open}
-                  aria-hidden={!open}
-                >
-                  <div className={styles.replyCollapseInner}>
-                    <div
-                      ref={(element) => {
-                        if (element) replyTreeRefs.current.set(comment.id, element)
-                        else replyTreeRefs.current.delete(comment.id)
-                      }}
-                      className={styles.replyTree}
-                    >
-                      {comment.replies.map((reply, replyIndex) => (
-                        <CommentRow
-                          key={reply.id}
-                          item={reply}
-                          variant="reply"
-                          delay={replyIndex * 40}
-                          hookDelay={0}
-                          menuId={menuId}
-                          replyCount={reply.replyCount ?? 0}
-                          onOpenProfile={onOpenProfile}
-                          onCommentLike={onCommentLike}
-                          onCommentMenu={onCommentMenu}
-                          onHideComment={onHideComment}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </li>
-        )
-      })}
+      {comments.map((comment, index) => (
+        <li key={comment.id} className={styles.thread}>
+          <CommentBranch
+            item={comment}
+            variant="root"
+            delay={index * 50}
+            menuId={menuId}
+            replyingTo={replyingTo}
+            openThreads={openThreads}
+            onToggleThread={toggleThread}
+            onStartReply={startReply}
+            onSubmitReply={onAddReply}
+            onCancelReply={() => setReplyingTo(null)}
+            onOpenProfile={onOpenProfile}
+            onCommentLike={onCommentLike}
+            onCommentMenu={onCommentMenu}
+            onHideComment={onHideComment}
+          />
+        </li>
+      ))}
     </ul>
   )
 }
@@ -390,6 +500,7 @@ const PostDetail: React.FC<PostDetailProps> = ({
   onCommentLike,
   onCommentMenu,
   onHideComment,
+  onAddReply,
   onOpenProfile,
   motion
 }) => (
@@ -571,6 +682,7 @@ const PostDetail: React.FC<PostDetailProps> = ({
       onCommentMenu={onCommentMenu}
       onHideComment={onHideComment}
       onOpenProfile={onOpenProfile}
+      onAddReply={onAddReply}
     />
   </div>
 )
@@ -845,34 +957,114 @@ export const FeedBoard: React.FC = () => {
   }
 
   const toggleCommentLike = (id: string) => {
-    setComments((current) =>
-      current.map((comment) => {
+    const toggle = <T extends { id: string; liked: boolean; likes: number; replies?: T[] }>(node: T): T => {
+      if (node.id === id) {
+        const liked = !node.liked
+        return { ...node, liked, likes: node.likes + (liked ? 1 : -1) }
+      }
+      if (!node.replies?.length) return node
+      return { ...node, replies: node.replies.map((reply) => toggle(reply)) }
+    }
+    setComments((current) => {
+      return current.map((comment) => {
         if (comment.id === id) {
           const liked = !comment.liked
           return { ...comment, liked, likes: comment.likes + (liked ? 1 : -1) }
         }
-        return {
-          ...comment,
-          replies: comment.replies.map((reply) => {
-            if (reply.id !== id) return reply
-            const liked = !reply.liked
-            return { ...reply, liked, likes: reply.likes + (liked ? 1 : -1) }
-          })
-        }
+        if (!comment.replies?.length) return comment
+        return { ...comment, replies: comment.replies.map((reply) => toggle(reply)) }
       })
-    )
+    })
   }
 
   const hideComment = (id: string) => {
-    setComments((current) =>
-      current
-        .filter((comment) => comment.id !== id)
-        .map((comment) => ({
+    const removeReplies = (replies: FeedReply[]): { replies: FeedReply[]; removed: boolean } => {
+      let removed = false
+      const next: FeedReply[] = []
+      for (const reply of replies) {
+        if (reply.id === id) {
+          removed = true
+          continue
+        }
+        const nested = reply.replies ?? []
+        const child = removeReplies(nested)
+        if (child.removed) {
+          removed = true
+          next.push({
+            ...reply,
+            replies: child.replies,
+            replyCount: Math.max(0, (reply.replyCount ?? nested.length) - 1)
+          })
+        } else {
+          next.push(reply)
+        }
+      }
+      return { replies: next, removed }
+    }
+
+    setComments((current) => {
+      if (current.some((comment) => comment.id === id)) {
+        return current.filter((comment) => comment.id !== id)
+      }
+      return current.map((comment) => {
+        const child = removeReplies(comment.replies)
+        if (!child.removed) return comment
+        return {
           ...comment,
-          replies: comment.replies.filter((reply) => reply.id !== id)
-        }))
-    )
+          replies: child.replies,
+          replyCount: Math.max(0, (comment.replyCount ?? comment.replies.length) - 1)
+        }
+      })
+    })
     setMenuId(null)
+  }
+
+  const addReply = (parentId: string, text: string) => {
+    const reply: FeedReply = {
+      id: `local-${Date.now()}`,
+      username: '@you',
+      avatarUrl: youAvatar,
+      time: 'Just now',
+      body: text,
+      likes: 0,
+      liked: false,
+      replies: []
+    }
+
+    const insert = (replies: FeedReply[]): FeedReply[] =>
+      replies.map((node) => {
+        if (node.id === parentId) {
+          const nested = node.replies ?? []
+          return {
+            ...node,
+            replies: [...nested, reply],
+            replyCount: (node.replyCount ?? nested.length) + 1
+          }
+        }
+        const nested = node.replies ?? []
+        if (nested.length === 0) return node
+        return { ...node, replies: insert(nested) }
+      })
+
+    setComments((current) =>
+      current.map((comment) => {
+        if (comment.id === parentId) {
+          return {
+            ...comment,
+            replies: [...comment.replies, reply],
+            replyCount: (comment.replyCount ?? comment.replies.length) + 1
+          }
+        }
+        return { ...comment, replies: insert(comment.replies) }
+      })
+    )
+    if (selectedId) {
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === selectedId ? { ...post, comments: post.comments + 1 } : post
+        )
+      )
+    }
   }
 
   const addComment = () => {
@@ -1192,6 +1384,7 @@ export const FeedBoard: React.FC = () => {
               onCommentLike={toggleCommentLike}
               onCommentMenu={(id) => setMenuId(menuId === id ? null : id)}
               onHideComment={hideComment}
+              onAddReply={addReply}
               onOpenProfile={(username) => openProfile(username)}
             />
           ) : (

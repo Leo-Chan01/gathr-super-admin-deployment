@@ -31,7 +31,10 @@ import {
   type UserFilter,
   type UserTab
 } from './userData'
+import { useTabIndicator } from '../motion/useMotion'
 import styles from './UsersBoard.module.css'
+
+const tabOrder: UserTab[] = ['individuals', 'organizations', 'pending']
 
 const tabs: { key: UserTab; label: string }[] = [
   { key: 'individuals', label: 'Individuals' },
@@ -57,6 +60,8 @@ const nextStatus = (blocked: boolean): AccountStatus => (blocked ? 'blocked' : '
 
 export const UsersBoard: React.FC = () => {
   const [tab, setTab] = useState<UserTab>('individuals')
+  const [direction, setDirection] = useState<1 | -1>(1)
+  const { tabsRef, indicator } = useTabIndicator(tab)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<UserFilter>('all')
   const [page, setPage] = useState(1)
@@ -126,6 +131,8 @@ export const UsersBoard: React.FC = () => {
   const visibleRows = activeRows.slice(start, start + pageSize)
 
   const changeTab = (next: UserTab) => {
+    if (next === tab) return
+    setDirection(tabOrder.indexOf(next) > tabOrder.indexOf(tab) ? 1 : -1)
     setTab(next)
     setQuery('')
     setFilter('all')
@@ -164,7 +171,16 @@ export const UsersBoard: React.FC = () => {
 
   return (
     <section className={styles.board}>
-      <div className={styles.tabs} role="tablist" aria-label="User groups">
+      <div className={styles.tabs} role="tablist" aria-label="User groups" ref={tabsRef}>
+        {indicator.ready && (
+          <span
+            className={styles.tabIndicator}
+              style={{
+              width: indicator.width,
+              transform: `translateX(${indicator.x}px)`
+            }}
+          />
+        )}
         {tabs.map((item) => {
           const isActive = tab === item.key
           return (
@@ -177,7 +193,6 @@ export const UsersBoard: React.FC = () => {
               onClick={() => changeTab(item.key)}
             >
               {item.label}
-              {isActive && <span className={styles.tabUnderline} />}
             </button>
           )
         })}
@@ -247,6 +262,7 @@ export const UsersBoard: React.FC = () => {
       </div>
 
       <div className={styles.tableWrap}>
+        <div key={tab} className={`${styles.pane} ${direction < 0 ? styles.paneBack : ''}`}>
         {tab === 'individuals' && (
           <IndividualsTable
             rows={visibleRows as IndividualUser[]}
@@ -273,6 +289,7 @@ export const UsersBoard: React.FC = () => {
             onReject={(org) => removePending(org.id)}
           />
         )}
+        </div>
       </div>
 
       {activeRows.length > pageSize && (

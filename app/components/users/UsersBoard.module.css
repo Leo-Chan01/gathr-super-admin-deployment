@@ -5,6 +5,7 @@
 }
 
 .tabs {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 28px;
@@ -27,6 +28,7 @@
   color: #9ca3af;
   cursor: pointer;
   white-space: nowrap;
+  transition: color 0.28s ease;
 }
 
 .tabActive {
@@ -34,14 +36,59 @@
   font-weight: 700;
 }
 
-.tabUnderline {
+.tabIndicator {
   position: absolute;
   left: 0;
-  right: 0;
   bottom: 0;
   height: 3px;
   border-radius: 999px;
   background: #fd5e53;
+  pointer-events: none;
+  transition:
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pane {
+  animation: paneForward 0.46s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.paneBack {
+  animation: paneBack 0.46s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes paneForward {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes paneBack {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pane,
+  .paneBack {
+    animation: none;
+  }
+
+  .tab,
+  .tabIndicator {
+    transition: none;
+  }
 }
 
 .toolbar {

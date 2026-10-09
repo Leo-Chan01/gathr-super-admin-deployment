@@ -22,7 +22,7 @@ const WalletsPage = () => {
           </label>
         </div>
         <p className={styles.subtitle}>
-          Manage payouts, schedule disbursals, and monitor treasury flow.
+          Manage payouts, schedule disbursal, and monitor treasury flow.
         </p>
       </header>
 

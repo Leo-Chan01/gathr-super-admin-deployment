@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import FlaggedCard, { FlaggedItem } from "../dashboard/FlaggedCard";
+import { useReflow } from "../motion/useMotion";
 import { reportItems, type ReportItem, type ReportStatus } from "./reportData";
 import styles from "./ReportsQueue.module.css";
 
@@ -20,6 +21,8 @@ export const ReportsQueue: React.FC = () => {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [menuOpen, setMenuOpen] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const beginRemove = useReflow(gridRef);
 
   const visibleItems = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -37,6 +40,7 @@ export const ReportsQueue: React.FC = () => {
     filters.find((filter) => filter.value === status) ?? filters[0];
 
   const handleDismiss = (item: FlaggedItem) => {
+    beginRemove(String(item.id));
     setItems((current) => current.filter((entry) => entry.id !== item.id));
   };
 
@@ -96,9 +100,11 @@ export const ReportsQueue: React.FC = () => {
       </div>
 
       {visibleItems.length > 0 ? (
-        <div className={styles.grid}>
+        <div className={styles.grid} ref={gridRef}>
           {visibleItems.map((item) => (
-            <FlaggedCard key={item.id} item={item} onDismiss={handleDismiss} />
+            <div key={item.id} data-flip-id={String(item.id)} className={styles.flipItem}>
+              <FlaggedCard item={item} onDismiss={handleDismiss} />
+            </div>
           ))}
         </div>
       ) : (

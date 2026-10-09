@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import KYCCard, { KYCItem } from './KYCCard'
 import WithdrawalCard, { WithdrawalItem } from './WithdrawalCard'
 import FlaggedCard, { FlaggedItem } from './FlaggedCard'
 import KYCDetailDrawer from './KYCDetailDrawer'
+import { useReflow, useTabIndicator } from '../motion/useMotion'
 import styles from './AttentionNeeded.module.css'
 
 type TabType = 'flagged' | 'kyc' | 'withdrawal'
@@ -14,6 +15,8 @@ interface TabConfig {
   label: string
   count: number
 }
+
+const tabOrder: TabType[] = ['flagged', 'kyc', 'withdrawal']
 
 const tabs: TabConfig[] = [
   { key: 'flagged', label: 'Flagged content', count: 14 },
@@ -140,9 +143,14 @@ const flaggedItems: FlaggedItem[] = [
 
 export const AttentionNeeded: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('kyc')
+  const [direction, setDirection] = useState<1 | -1>(1)
   const [showAll, setShowAll] = useState(false)
   const [kycList, setKycList] = useState<KYCItem[]>(initialKycItems)
+  const [flaggedList, setFlaggedList] = useState<FlaggedItem[]>(flaggedItems)
   const [selectedKYCItem, setSelectedKYCItem] = useState<KYCItem | null>(null)
+  const { tabsRef, indicator } = useTabIndicator(activeTab)
+  const flaggedGridRef = useRef<HTMLDivElement>(null)
+  const beginFlaggedRemove = useReflow(flaggedGridRef)
 
   const getActiveCount = () => {
     switch (activeTab) {
@@ -151,7 +159,7 @@ export const AttentionNeeded: React.FC = () => {
       case 'withdrawal':
         return { showing: withdrawalItems.length, total: 24 }
       case 'flagged':
-        return { showing: flaggedItems.length, total: 14 }
+        return { showing: flaggedList.length, total: 14 }
     }
   }
 
@@ -163,6 +171,17 @@ export const AttentionNeeded: React.FC = () => {
 
   const handleRejectKYC = (item: KYCItem) => {
     setKycList((prev) => prev.filter((k) => k.id !== item.id))
+  }
+
+  const selectTab = (next: TabType) => {
+    if (next === activeTab) return
+    setDirection(tabOrder.indexOf(next) > tabOrder.indexOf(activeTab) ? 1 : -1)
+    setActiveTab(next)
+  }
+
+  const dismissFlagged = (item: FlaggedItem) => {
+    beginFlaggedRemove(String(item.id))
+    setFlaggedList((current) => current.filter((entry) => entry.id !== item.id))
   }
 
   return (
@@ -177,14 +196,25 @@ export const AttentionNeeded: React.FC = () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className={styles.tabsContainer}>
+        <div className={styles.tabsContainer} role="tablist" aria-label="Attention needed" ref={tabsRef}>
+          {indicator.ready && (
+            <span
+              className={styles.tabIndicator}
+              style={{
+                width: indicator.width,
+                transform: `translateX(${indicator.x}px)`
+              }}
+            />
+          )}
           {tabs.map((tab) => {
             const isActive = activeTab === tab.key
             return (
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setActiveTab(tab.key)}
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => selectTab(tab.key)}
                 className={`${styles.tabButton} ${
                   isActive ? styles.tabButtonActive : ''
                 }`}
@@ -192,7 +222,6 @@ export const AttentionNeeded: React.FC = () => {
                 <span>
                   {tab.label} ({tab.count})
                 </span>
-                {isActive && <span className={styles.activeUnderline} />}
               </button>
             )
           })}
@@ -201,33 +230,44 @@ export const AttentionNeeded: React.FC = () => {
 
       {/* Grid Content */}
       <div className={styles.contentGridArea}>
-        {activeTab === 'flagged' && (
-          <div className={styles.flaggedGrid}>
-            {flaggedItems.map((item) => (
-              <FlaggedCard key={item.id} item={item} />
-            ))}
-          </div>
-        )}
+        <div
+          key={activeTab}
+          className={`${styles.pane} ${direction < 0 ? styles.paneBack : ''}`}
+        >
+          {activeTab === 'flagged' && (
+            flaggedList.length > 0 ? (
+              <div className={styles.flaggedGrid} ref={flaggedGridRef}>
+                {flaggedList.map((item) => (
+                  <div key={item.id} data-flip-id={String(item.id)} className={styles.flipItem}>
+                    <FlaggedCard item={item} onDismiss={dismissFlagged} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.empty}>No flagged content in this view.</p>
+            )
+          )}
 
-        {activeTab === 'kyc' && (
-          <div className={styles.kycGrid}>
-            {kycList.map((item) => (
-              <KYCCard
-                key={item.id}
-                item={item}
-                onClick={() => setSelectedKYCItem(item)}
-              />
-            ))}
-          </div>
-        )}
+          {activeTab === 'kyc' && (
+            <div className={styles.kycGrid}>
+              {kycList.map((item) => (
+                <KYCCard
+                  key={item.id}
+                  item={item}
+                  onClick={() => setSelectedKYCItem(item)}
+                />
+              ))}
+            </div>
+          )}
 
-        {activeTab === 'withdrawal' && (
-          <div className={styles.withdrawalGrid}>
-            {withdrawalItems.map((item) => (
-              <WithdrawalCard key={item.id} item={item} />
-            ))}
-          </div>
-        )}
+          {activeTab === 'withdrawal' && (
+            <div className={styles.withdrawalGrid}>
+              {withdrawalItems.map((item) => (
+                <WithdrawalCard key={item.id} item={item} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Footer Navigation Bar */}

@@ -60,9 +60,48 @@ const audiences: { value: BroadcastAudience; label: string }[] = [
   { value: 'events', label: 'Events' }
 ]
 
+type ImageSlide = { index: number; from: number; dir: 1 | -1 }
+
+const restingSlide: ImageSlide = { index: 0, from: 0, dir: 1 }
+
+const PostPhotos: React.FC<{
+  images: string[]
+  slide: ImageSlide
+  sizes: string
+}> = ({ images, slide, sizes }) => {
+  const animate = slide.from !== slide.index
+  const motion = slide.dir > 0 ? styles.photoNext : styles.photoPrev
+
+  return (
+    <>
+      {images.map((src, imagePosition) => {
+        const current = imagePosition === slide.index
+        const leaving = animate && imagePosition === slide.from
+        return (
+          <Image
+            key={`${src}-${imagePosition}`}
+            src={src}
+            alt=""
+            fill
+            sizes={sizes}
+            className={[
+              styles.photo,
+              current ? styles.photoCurrent : '',
+              leaving ? styles.photoLeaving : '',
+              animate && (current || leaving) ? motion : ''
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          />
+        )
+      })}
+    </>
+  )
+}
+
 interface PostDetailProps {
   post: FeedPost
-  imageIndex: number
+  imageSlide: ImageSlide
   saved: boolean
   comments: FeedComment[]
   sort: 'latest' | 'oldest'
@@ -257,7 +296,7 @@ const CommentThread: React.FC<{
     <ul className={styles.commentList}>
       {comments.map((comment, index) => {
         const hasReplies = comment.replies.length > 0
-        const open = (openThreads[comment.id] ?? true) && hasReplies
+        const open = Boolean(openThreads[comment.id]) && hasReplies
         const pillReplyCount = comment.replyCount ?? comment.replies.length
 
         return (
@@ -276,7 +315,7 @@ const CommentThread: React.FC<{
                   onToggleReplies={() =>
                     setOpenThreads((current) => ({
                       ...current,
-                      [comment.id]: !(current[comment.id] ?? true)
+                      [comment.id]: !current[comment.id]
                     }))
                   }
                   onOpenProfile={onOpenProfile}
@@ -285,29 +324,37 @@ const CommentThread: React.FC<{
                   onHideComment={onHideComment}
                 />
               </div>
-              {open && (
+              {hasReplies && (
                 <div
-                  ref={(element) => {
-                    if (element) replyTreeRefs.current.set(comment.id, element)
-                    else replyTreeRefs.current.delete(comment.id)
-                  }}
-                  className={styles.replyTree}
+                  className={`${styles.replyCollapse} ${open ? styles.replyCollapseOpen : ''}`}
+                  inert={!open}
+                  aria-hidden={!open}
                 >
-                  {comment.replies.map((reply, replyIndex) => (
-                    <CommentRow
-                      key={reply.id}
-                      item={reply}
-                      variant="reply"
-                      delay={160 + replyIndex * 70}
-                      hookDelay={180 + replyIndex * 70}
-                      menuId={menuId}
-                      replyCount={reply.replyCount ?? 0}
-                      onOpenProfile={onOpenProfile}
-                      onCommentLike={onCommentLike}
-                      onCommentMenu={onCommentMenu}
-                      onHideComment={onHideComment}
-                    />
-                  ))}
+                  <div className={styles.replyCollapseInner}>
+                    <div
+                      ref={(element) => {
+                        if (element) replyTreeRefs.current.set(comment.id, element)
+                        else replyTreeRefs.current.delete(comment.id)
+                      }}
+                      className={styles.replyTree}
+                    >
+                      {comment.replies.map((reply, replyIndex) => (
+                        <CommentRow
+                          key={reply.id}
+                          item={reply}
+                          variant="reply"
+                          delay={replyIndex * 40}
+                          hookDelay={0}
+                          menuId={menuId}
+                          replyCount={reply.replyCount ?? 0}
+                          onOpenProfile={onOpenProfile}
+                          onCommentLike={onCommentLike}
+                          onCommentMenu={onCommentMenu}
+                          onHideComment={onHideComment}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -320,7 +367,7 @@ const CommentThread: React.FC<{
 
 const PostDetail: React.FC<PostDetailProps> = ({
   post,
-  imageIndex,
+  imageSlide,
   saved,
   comments,
   sort,
@@ -395,13 +442,7 @@ const PostDetail: React.FC<PostDetailProps> = ({
       <p className={styles.caption}>{post.caption}</p>
 
       <div className={styles.detailMedia}>
-        <Image
-          src={post.images[imageIndex] ?? post.images[0]}
-          alt=""
-          fill
-          sizes="420px"
-          className={styles.photo}
-        />
+        <PostPhotos images={post.images} slide={imageSlide} sizes="420px" />
         {post.images.length > 1 && (
           <>
             <button
@@ -422,7 +463,7 @@ const PostDetail: React.FC<PostDetailProps> = ({
             </button>
             <div className={styles.dots} role="tablist" aria-label="Post images">
               {post.images.map((image, index) => {
-                const active = imageIndex === index
+                const active = imageSlide.index === index
                 return (
                   <button
                     key={image}
@@ -541,7 +582,7 @@ export const FeedBoard: React.FC = () => {
   const [query, setQuery] = useState('')
   const [posts, setPosts] = useState<FeedPost[]>(feedPosts)
   const [savedIds, setSavedIds] = useState<string[]>([])
-  const [imageIndex, setImageIndex] = useState<Record<string, number>>({})
+  const [imageSlides, setImageSlides] = useState<Record<string, ImageSlide>>({})
   const [menuId, setMenuId] = useState<string | null>(null)
   const [activity, setActivity] = useState<ActivityItem[]>(initialActivity)
   const [showAllActivity, setShowAllActivity] = useState(false)
@@ -760,10 +801,19 @@ export const FeedBoard: React.FC = () => {
   }
 
   const showImage = (id: string, count: number, delta: number) => {
-    setImageIndex((current) => {
-      const index = current[id] ?? 0
-      const next = (index + delta + count) % count
-      return { ...current, [id]: next }
+    setImageSlides((current) => {
+      const previous = current[id]?.index ?? 0
+      const index = (previous + delta + count) % count
+      if (index === previous) return current
+      return { ...current, [id]: { index, from: previous, dir: delta >= 0 ? 1 : -1 } }
+    })
+  }
+
+  const selectImage = (id: string, index: number) => {
+    setImageSlides((current) => {
+      const previous = current[id]?.index ?? 0
+      if (index === previous) return current
+      return { ...current, [id]: { index, from: previous, dir: index > previous ? 1 : -1 } }
     })
   }
 
@@ -1003,12 +1053,10 @@ export const FeedBoard: React.FC = () => {
                 <p className={styles.caption}>{post.caption}</p>
 
                 <div className={styles.media}>
-                  <Image
-                    src={post.images[imageIndex[post.id] ?? 0]}
-                    alt=""
-                    fill
+                  <PostPhotos
+                    images={post.images}
+                    slide={imageSlides[post.id] ?? restingSlide}
                     sizes="(max-width: 1100px) 100vw, 720px"
-                    className={styles.photo}
                   />
                   {post.images.length > 1 && (
                     <>
@@ -1033,7 +1081,7 @@ export const FeedBoard: React.FC = () => {
                   {post.images.length > 1 && (
                     <div className={styles.dots} role="tablist" aria-label="Post images">
                       {post.images.map((image, index) => {
-                        const active = (imageIndex[post.id] ?? 0) === index
+                        const active = (imageSlides[post.id]?.index ?? 0) === index
                         return (
                           <button
                             key={image}
@@ -1042,9 +1090,7 @@ export const FeedBoard: React.FC = () => {
                             aria-label={`Image ${index + 1}`}
                             aria-selected={active}
                             className={`${styles.dot} ${active ? styles.dotActive : ''}`}
-                            onClick={() =>
-                              setImageIndex((current) => ({ ...current, [post.id]: index }))
-                            }
+                            onClick={() => selectImage(post.id, index)}
                           />
                         )
                       })}
@@ -1118,7 +1164,7 @@ export const FeedBoard: React.FC = () => {
               key={panelPost.id}
               motion={panelMotion}
               post={panelPost}
-              imageIndex={imageIndex[panelPost.id] ?? 0}
+              imageSlide={imageSlides[panelPost.id] ?? restingSlide}
               saved={savedIds.includes(panelPost.id)}
               comments={panelComments}
               sort={commentSort}
@@ -1130,9 +1176,7 @@ export const FeedBoard: React.FC = () => {
               onShare={() => sharePost(panelPost)}
               onSave={() => toggleSaved(panelPost.id)}
               onShowImage={(delta) => showImage(panelPost.id, panelPost.images.length, delta)}
-              onSelectImage={(index) =>
-                setImageIndex((current) => ({ ...current, [panelPost.id]: index }))
-              }
+              onSelectImage={(index) => selectImage(panelPost.id, index)}
               onToggleMenu={() =>
                 setMenuId(menuId === panelPost.id ? null : panelPost.id)
               }

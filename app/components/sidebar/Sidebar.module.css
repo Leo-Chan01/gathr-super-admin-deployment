@@ -158,11 +158,10 @@
   overflow: hidden;
   font-family: inherit;
   background: none;
-  border-top: none;
-  border-bottom: none;
-  border-left: none;
-  border-right: none;
+  border: none;
+  border-right: 4px solid transparent;
   width: 100%;
+  box-sizing: border-box;
   cursor: pointer;
   text-align: left;
 }
@@ -172,7 +171,6 @@
   border-top-left-radius: 8px;
   border-bottom-left-radius: 8px;
   border-right-color: #FD5E53;
-  border-right-width: 4px;
   color: #024057;
 }
 
@@ -181,7 +179,6 @@
   border-top-left-radius: 8px;
   border-bottom-left-radius: 8px;
   border-right-color: #FD5E53;
-  border-right-width: 4px;
   color: #1E293B;
   font-weight: 600;
 }

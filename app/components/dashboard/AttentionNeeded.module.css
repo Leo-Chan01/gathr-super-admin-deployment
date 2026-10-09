@@ -32,6 +32,7 @@
 }
 
 .tabsContainer {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 24px;
@@ -54,7 +55,7 @@
   font-family: inherit;
   color: #6B7280;
   font-weight: 500;
-  transition: color 150ms ease;
+  transition: color 0.28s ease;
 }
 
 .tabButton:hover {
@@ -66,18 +67,39 @@
   color: #1E293B;
 }
 
-.activeUnderline {
+.tabIndicator {
   position: absolute;
-  bottom: 0;
   left: 0;
-  right: 0;
+  bottom: 0;
   height: 2.5px;
-  background-color: #FD5E53;
   border-radius: 9999px;
+  background-color: #FD5E53;
+  pointer-events: none;
+  transition:
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .contentGridArea {
   min-height: 280px;
+}
+
+.pane {
+  animation: paneForward 0.46s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.paneBack {
+  animation: paneBack 0.46s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.flipItem {
+  min-width: 0;
+}
+
+.empty {
+  margin: 28px 0;
+  font-size: 14px;
+  color: #6b7280;
 }
 
 .kycGrid {
@@ -125,6 +147,40 @@
 .viewAllButton:hover {
   color: #E0483E;
   text-decoration: underline;
+}
+
+@keyframes paneForward {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes paneBack {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pane,
+  .paneBack {
+    animation: none;
+  }
+
+  .tabIndicator,
+  .tabButton {
+    transition: none;
+  }
 }
 
 @media (min-width: 640px) {

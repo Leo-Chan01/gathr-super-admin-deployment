@@ -116,6 +116,10 @@
   gap: 16px;
 }
 
+.flipItem {
+  min-width: 0;
+}
+
 .empty {
   margin: 12px 0 0;
   font-size: 14px;

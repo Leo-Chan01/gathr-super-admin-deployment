@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import styles from './Sidebar.module.css'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import appLogo from '@/public/images/gathr-logo(light).png'
 import { useSidebar } from '../../context/SidebarContext'
 import SidebarControlButton from './SidebarControlButton'
@@ -42,6 +42,7 @@ const navigationTileItems: NavigationTileItem[] = [
 
 const SideBar = () => {
         const pathname = usePathname()
+        const router = useRouter()
         const { isOpen, closeSidebar } = useSidebar()
         const [collapsed, setCollapsed] = useState(false)
         const [settingsOpen, setSettingsOpen] = useState(false)
@@ -147,7 +148,11 @@ const SideBar = () => {
                                                 </div>
                                         </div>
 
-                                        <button type="button" className={styles.logoutButton}>
+                                        <button
+                                                type="button"
+                                                className={styles.logoutButton}
+                                                onClick={() => router.push('/login')}
+                                        >
                                                 <LogOut className={styles.logoutIcon} />
                                                 <span>Log out</span>
                                         </button>

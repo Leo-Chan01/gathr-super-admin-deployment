@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import AppShell from "./components/layout/AppShell";
 import "./globals.css";
 
-const geistSans = Geist({
-	variable: "--font-geist-sans",
-	subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-	variable: "--font-geist-mono",
-	subsets: ["latin"],
+const bricolage = localFont({
+	src: "../public/fonts/BricolageGrotesque-VariableFont_opsz,wdth,wght.ttf",
+	weight: "200 800",
+	display: "swap",
+	variable: "--font-bricolage",
+	fallback: ["Helvetica", "Arial", "sans-serif"],
 });
 
 export const metadata: Metadata = {
@@ -26,9 +24,9 @@ export default function RootLayout({
 	return (
 		<html
 			lang="en"
-			className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+			className={`${bricolage.variable} ${bricolage.className} h-full antialiased`}
 		>
-			<body className="h-full overflow-hidden flex flex-col antialiased">
+			<body className="color-white h-full overflow-hidden flex flex-col antialiased">
 				<AppShell>{children}</AppShell>
 			</body>
 		</html>

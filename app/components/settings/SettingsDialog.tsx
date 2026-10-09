@@ -2,6 +2,7 @@
 
 import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { Camera, LogOut, User, X } from "lucide-react";
 import styles from "./SettingsDialog.module.css";
 
@@ -28,6 +29,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   open,
   onClose,
 }) => {
+  const router = useRouter();
   const titleId = useId();
   const emailRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
@@ -136,7 +138,11 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               Access control
             </button>
           </nav>
-          <button type="button" className={styles.logout} onClick={onClose}>
+          <button
+            type="button"
+            className={styles.logout}
+            onClick={() => router.push("/login")}
+          >
             <LogOut className={styles.logoutIcon} />
             Log out
           </button>

@@ -1,9 +1,9 @@
-import React from 'react'
-import { Search } from 'lucide-react'
-import WalletSummaryCards from '../components/wallets/WalletSummaryCards'
-import PayoutOverview from '../components/wallets/PayoutOverview'
-import RequestsActivity from '../components/wallets/RequestsActivity'
-import styles from './Wallets.module.css'
+import React from "react";
+import { Search } from "lucide-react";
+import WalletSummaryCards from "../components/wallets/WalletSummaryCards";
+import PayoutOverview from "../components/wallets/PayoutOverview";
+import RequestsActivity from "../components/wallets/RequestsActivity";
+import styles from "./Wallets.module.css";
 
 const WalletsPage = () => {
   return (
@@ -30,7 +30,7 @@ const WalletsPage = () => {
       <PayoutOverview />
       <RequestsActivity />
     </div>
-  )
-}
+  );
+};
 
-export default WalletsPage
+export default WalletsPage;

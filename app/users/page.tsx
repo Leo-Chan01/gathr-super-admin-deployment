@@ -1,6 +1,6 @@
-import React, { Suspense } from 'react'
-import UsersBoard from '../components/users/UsersBoard'
-import styles from './Users.module.css'
+import React, { Suspense } from "react";
+import UsersBoard from "../components/users/UsersBoard";
+import styles from "./Users.module.css";
 
 const UsersPage = () => {
   return (
@@ -8,7 +8,8 @@ const UsersPage = () => {
       <header className={styles.header}>
         <h1 className={styles.title}>Users</h1>
         <p className={styles.subtitle}>
-          Monitor user engagement, oversee community interactions, and analyze platform activity.
+          Monitor user engagement, oversee community interactions, and analyze
+          platform activity.
         </p>
       </header>
 
@@ -17,7 +18,7 @@ const UsersPage = () => {
         <UsersBoard />
       </Suspense>
     </div>
-  )
-}
+  );
+};
 
-export default UsersPage
+export default UsersPage;

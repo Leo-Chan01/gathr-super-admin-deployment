@@ -7,7 +7,7 @@
 .card {
   border-radius: 24px;
   padding: 20px;
-  border: 0.5px solid #1F1F1F8C;
+  border: 0.5px solid #1f1f1f8c;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -30,7 +30,7 @@
 .value {
   font-size: 26px;
   font-weight: 800;
-  color: #1E293B;
+  color: #1e293b;
   letter-spacing: -0.5px;
   line-height: 1;
 }
@@ -69,7 +69,7 @@
 }
 
 .trendDown {
-  color: #FD5E53;
+  color: #fd5e53;
 }
 
 .trendIcon {
@@ -111,7 +111,7 @@
   .grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-  
+
   .value {
     font-size: 28px;
   }

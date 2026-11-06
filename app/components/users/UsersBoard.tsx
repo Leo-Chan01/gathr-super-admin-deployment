@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import React, { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Check,
   ChevronDown,
@@ -12,291 +12,339 @@ import {
   MoreHorizontal,
   Plus,
   Search,
-  X
-} from 'lucide-react'
-import AvatarIllustration from '../dashboard/AvatarIllustration'
-import avatarStyles from '../dashboard/AvatarIllustration.module.css'
-import KYCDetailDrawer from '../dashboard/KYCDetailDrawer'
-import MetricCards from '../dashboard/MetricCards'
-import type { KYCItem } from '../dashboard/KYCCard'
-import { ErrorState, InlineSpinner, SkeletonRows } from '../common/AsyncState'
+  X,
+} from "lucide-react";
+import AvatarIllustration from "../dashboard/AvatarIllustration";
+import avatarStyles from "../dashboard/AvatarIllustration.module.css";
+import KYCDetailDrawer from "../dashboard/KYCDetailDrawer";
+import MetricCards from "../dashboard/MetricCards";
+import type { KYCItem } from "../dashboard/KYCCard";
+import { ErrorState, InlineSpinner, SkeletonRows } from "../common/AsyncState";
 import {
   approveKyc,
   getUserStats,
   listPendingKyc,
   listUsers,
   rejectKyc,
-  updateUserStatus
-} from '../../lib/api/admin'
-import RestrictUserDialog, { type Restriction } from './RestrictUserDialog'
+  updateUserStatus,
+} from "../../lib/api/admin";
+import RestrictUserDialog, { type Restriction } from "./RestrictUserDialog";
 import {
   accountStatus,
   toKycItem,
   toUserMetrics,
   toUserRow,
   type AccountStatus,
-  type UserRow
-} from '../../lib/api/adapters'
-import { errorMessage } from '../../lib/api/client'
-import type { PageMeta, UserStatus } from '../../lib/api/types'
-import { useDebounced, useResource } from '../../lib/hooks/useResource'
-import { useTabIndicator } from '../motion/useMotion'
-import styles from './UsersBoard.module.css'
+  type UserRow,
+} from "../../lib/api/adapters";
+import { errorMessage } from "../../lib/api/client";
+import type { PageMeta, UserStatus } from "../../lib/api/types";
+import { useDebounced, useResource } from "../../lib/hooks/useResource";
+import { useTabIndicator } from "../motion/useMotion";
+import styles from "./UsersBoard.module.css";
 
-type UserTab = 'individuals' | 'organizations' | 'pending'
-type StatusFilter = 'all' | 'ACTIVE' | 'BANNED' | 'SUSPENDED'
-type CategoryFilter = 'all' | 'for-profit' | 'non-profit'
-type UserFilter = StatusFilter | CategoryFilter
+type UserTab = "individuals" | "organizations" | "pending";
+type StatusFilter = "all" | "ACTIVE" | "BANNED" | "SUSPENDED";
+type CategoryFilter = "all" | "for-profit" | "non-profit";
+type UserFilter = StatusFilter | CategoryFilter;
 
-const tabOrder: UserTab[] = ['individuals', 'organizations', 'pending']
+const tabOrder: UserTab[] = ["individuals", "organizations", "pending"];
 
 const tabs: { key: UserTab; label: string }[] = [
-  { key: 'individuals', label: 'Individuals' },
-  { key: 'organizations', label: 'Organizations' },
-  { key: 'pending', label: 'Pending verification' }
-]
+  { key: "individuals", label: "Individuals" },
+  { key: "organizations", label: "Organizations" },
+  { key: "pending", label: "Pending verification" },
+];
 
 const statusFilters: { value: UserFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'BANNED', label: 'Banned' },
-  { value: 'SUSPENDED', label: 'Suspended' }
-]
+  { value: "all", label: "All" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "BANNED", label: "Banned" },
+  { value: "SUSPENDED", label: "Suspended" },
+];
 
 const categoryFilters: { value: UserFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'for-profit', label: 'For-profit' },
-  { value: 'non-profit', label: 'Non-profit' }
-]
+  { value: "all", label: "All" },
+  { value: "for-profit", label: "For-profit" },
+  { value: "non-profit", label: "Non-profit" },
+];
 
-const categoryLabel: Record<'for-profit' | 'non-profit', string> = {
-  'for-profit': 'For-profit',
-  'non-profit': 'Non-profit'
-}
+const categoryLabel: Record<"for-profit" | "non-profit", string> = {
+  "for-profit": "For-profit",
+  "non-profit": "Non-profit",
+};
 
+const pageSizeFor = (tab: UserTab) => (tab === "individuals" ? 12 : 10);
 
-const pageSizeFor = (tab: UserTab) => (tab === 'individuals' ? 12 : 10)
-
-const isTab = (value: string | null): value is UserTab => tabOrder.includes(value as UserTab)
+const isTab = (value: string | null): value is UserTab =>
+  tabOrder.includes(value as UserTab);
 
 interface TableData {
-  tab: UserTab
-  rows: UserRow[]
-  meta: PageMeta
+  tab: UserTab;
+  rows: UserRow[];
+  meta: PageMeta;
 }
 
 interface PendingData {
-  rows: KYCItem[]
-  meta: PageMeta
+  rows: KYCItem[];
+  meta: PageMeta;
 }
 
 export const UsersBoard: React.FC = () => {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const initialTab = searchParams.get('tab')
-  const [tab, setTab] = useState<UserTab>(isTab(initialTab) ? initialTab : 'individuals')
-  const [direction, setDirection] = useState<1 | -1>(1)
-  const { tabsRef, indicator } = useTabIndicator(tab)
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<UserFilter>('all')
-  const [page, setPage] = useState(1)
-  const [filterOpen, setFilterOpen] = useState(false)
-  const [menuId, setMenuId] = useState<string | null>(null)
-  const [pendingToggle, setPendingToggle] = useState<string | null>(null)
-  const [decidingId, setDecidingId] = useState<string | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [selectedKyc, setSelectedKyc] = useState<KYCItem | null>(null)
-  const [restricting, setRestricting] = useState<UserRow | null>(null)
-  const search = useDebounced(query.trim())
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab");
+  const [tab, setTab] = useState<UserTab>(
+    isTab(initialTab) ? initialTab : "individuals",
+  );
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const { tabsRef, indicator } = useTabIndicator(tab);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<UserFilter>("all");
+  const [page, setPage] = useState(1);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [pendingToggle, setPendingToggle] = useState<string | null>(null);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [selectedKyc, setSelectedKyc] = useState<KYCItem | null>(null);
+  const [restricting, setRestricting] = useState<UserRow | null>(null);
+  const search = useDebounced(query.trim());
 
-  const filterOptions = tab === 'pending' ? categoryFilters : statusFilters
-  const activeFilter = filterOptions.find((option) => option.value === filter) ?? filterOptions[0]
-  const pageSize = pageSizeFor(tab)
+  const filterOptions = tab === "pending" ? categoryFilters : statusFilters;
+  const activeFilter =
+    filterOptions.find((option) => option.value === filter) ?? filterOptions[0];
+  const pageSize = pageSizeFor(tab);
 
-  const stats = useResource((signal) => getUserStats({ signal }).then(toUserMetrics), [])
+  const stats = useResource(
+    (signal) => getUserStats({ signal }).then(toUserMetrics),
+    [],
+  );
 
   // Individuals + organizations: server-side search, status filter and paging.
   const users = useResource<TableData | null>(
     async (signal) => {
-      if (tab === 'pending') return null
+      if (tab === "pending") return null;
       const result = await listUsers(
         {
           page,
           limit: pageSize,
-          category: tab === 'individuals' ? 'INDIVIDUAL' : 'ORGANIZATION',
-          status: filter === 'all' ? undefined : (filter as UserStatus),
-          search: search || undefined
+          category: tab === "individuals" ? "INDIVIDUAL" : "ORGANIZATION",
+          status: filter === "all" ? undefined : (filter as UserStatus),
+          search: search || undefined,
         },
-        { signal }
-      )
-      return { tab, rows: result.items.map(toUserRow), meta: result.meta }
+        { signal },
+      );
+      return { tab, rows: result.items.map(toUserRow), meta: result.meta };
     },
-    [tab, page, filter, search, pageSize]
-  )
+    [tab, page, filter, search, pageSize],
+  );
 
   // Pending verification: the KYC queue has no search/category params, so
   // those filters apply to the loaded page only.
   const pending = useResource<PendingData | null>(
     async (signal) => {
-      if (tab !== 'pending') return null
-      const result = await listPendingKyc({ page, limit: pageSize }, { signal })
-      return { rows: result.items.map(toKycItem), meta: result.meta }
+      if (tab !== "pending") return null;
+      const result = await listPendingKyc(
+        { page, limit: pageSize },
+        { signal },
+      );
+      return { rows: result.items.map(toKycItem), meta: result.meta };
     },
-    [tab, page, pageSize]
-  )
+    [tab, page, pageSize],
+  );
 
   const pendingRows = useMemo(() => {
-    const rows = pending.data?.rows ?? []
-    const normalized = search.toLowerCase()
+    const rows = pending.data?.rows ?? [];
+    const normalized = search.toLowerCase();
     return rows.filter((row) => {
-      if (filter === 'for-profit' && row.category !== 'For-profit') return false
-      if (filter === 'non-profit' && row.category !== 'Non-profit') return false
-      if (!normalized) return true
-      return `${row.name} ${row.email ?? ''}`.toLowerCase().includes(normalized)
-    })
-  }, [pending.data, filter, search])
+      if (filter === "for-profit" && row.category !== "For-profit")
+        return false;
+      if (filter === "non-profit" && row.category !== "Non-profit")
+        return false;
+      if (!normalized) return true;
+      return `${row.name} ${row.email ?? ""}`
+        .toLowerCase()
+        .includes(normalized);
+    });
+  }, [pending.data, filter, search]);
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
-      const target = event.target as HTMLElement
-      if (target.closest('[data-menu-root]')) return
-      setFilterOpen(false)
-      setMenuId(null)
-    }
-    document.addEventListener('mousedown', close)
-    return () => document.removeEventListener('mousedown', close)
-  }, [])
+      const target = event.target as HTMLElement;
+      if (target.closest("[data-menu-root]")) return;
+      setFilterOpen(false);
+      setMenuId(null);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
 
-  const active = tab === 'pending' ? pending : users
-  const meta = active.data?.meta
-  const totalPages = meta?.totalPages ?? 1
-  const visibleCount = tab === 'pending' ? pendingRows.length : users.data?.rows.length ?? 0
-  const currentPage = Math.min(page, totalPages)
-    // Show skeletons until data for *this* tab arrives (users resource is shared by two tabs).
-  const usersStale = tab !== 'pending' && users.data?.tab !== tab
-  const initialLoading = active.loading && (!active.data || usersStale)
-  const userRows = usersStale ? [] : users.data?.rows ?? []
+  const active = tab === "pending" ? pending : users;
+  const meta = active.data?.meta;
+  const totalPages = meta?.totalPages ?? 1;
+  const visibleCount =
+    tab === "pending" ? pendingRows.length : (users.data?.rows.length ?? 0);
+  const currentPage = Math.min(page, totalPages);
+  // Show skeletons until data for *this* tab arrives (users resource is shared by two tabs).
+  const usersStale = tab !== "pending" && users.data?.tab !== tab;
+  const initialLoading = active.loading && (!active.data || usersStale);
+  const userRows = usersStale ? [] : (users.data?.rows ?? []);
 
   const changeTab = (next: UserTab) => {
-    if (next === tab) return
-    setDirection(tabOrder.indexOf(next) > tabOrder.indexOf(tab) ? 1 : -1)
-    setTab(next)
-    setQuery('')
-    setFilter('all')
-    setPage(1)
-    setFilterOpen(false)
-    setMenuId(null)
-    setActionError(null)
-    router.replace(next === 'individuals' ? '/users' : `/users?tab=${next}`, { scroll: false })
-  }
+    if (next === tab) return;
+    setDirection(tabOrder.indexOf(next) > tabOrder.indexOf(tab) ? 1 : -1);
+    setTab(next);
+    setQuery("");
+    setFilter("all");
+    setPage(1);
+    setFilterOpen(false);
+    setMenuId(null);
+    setActionError(null);
+    router.replace(next === "individuals" ? "/users" : `/users?tab=${next}`, {
+      scroll: false,
+    });
+  };
 
   const patchRow = (id: string, patch: Partial<UserRow>) =>
     users.mutate((current) =>
-      current ? { ...current, rows: current.rows.map((row) => (row.id === id ? { ...row, ...patch } : row)) } : current
-    )
+      current
+        ? {
+            ...current,
+            rows: current.rows.map((row) =>
+              row.id === id ? { ...row, ...patch } : row,
+            ),
+          }
+        : current,
+    );
 
   const statusPatch = (status: UserStatus): Partial<UserRow> => {
-    const view = accountStatus(status)
-    return { rawStatus: status, status: view, blocked: view === 'blocked' || view === 'suspended' }
-  }
+    const view = accountStatus(status);
+    return {
+      rawStatus: status,
+      status: view,
+      blocked: view === "blocked" || view === "suspended",
+    };
+  };
 
   /** Toggle on → ask Ban or Suspend. Toggle off → reinstate immediately. */
   const toggleBlocked = async (row: UserRow) => {
-    if (pendingToggle) return
+    if (pendingToggle) return;
     if (!row.blocked) {
-      setRestricting(row)
-      return
+      setRestricting(row);
+      return;
     }
-    const previous = { blocked: row.blocked, status: row.status, rawStatus: row.rawStatus }
-    setPendingToggle(row.id)
-    setActionError(null)
+    const previous = {
+      blocked: row.blocked,
+      status: row.status,
+      rawStatus: row.rawStatus,
+    };
+    setPendingToggle(row.id);
+    setActionError(null);
     // Optimistic; roll back on failure.
-    patchRow(row.id, statusPatch('ACTIVE'))
+    patchRow(row.id, statusPatch("ACTIVE"));
     try {
-      await updateUserStatus(row.id, 'ACTIVE')
-      stats.reload()
+      await updateUserStatus(row.id, "ACTIVE");
+      stats.reload();
     } catch (err) {
-      patchRow(row.id, previous)
-      setActionError(`Couldn't reinstate ${row.name}: ${errorMessage(err)}`)
+      patchRow(row.id, previous);
+      setActionError(`Couldn't reinstate ${row.name}: ${errorMessage(err)}`);
     } finally {
-      setPendingToggle(null)
+      setPendingToggle(null);
     }
-  }
+  };
 
   /** Called by the dialog; errors propagate so the dialog can show them. */
   const restrict = async (status: Restriction) => {
-    if (!restricting) return
-    await updateUserStatus(restricting.id, status)
-    patchRow(restricting.id, statusPatch(status))
-    stats.reload()
-  }
+    if (!restricting) return;
+    await updateUserStatus(restricting.id, status);
+    patchRow(restricting.id, statusPatch(status));
+    stats.reload();
+  };
 
   const removePending = (id: string) => {
     pending.mutate((current) =>
       current
         ? {
             rows: current.rows.filter((row) => String(row.id) !== id),
-            meta: { ...current.meta, totalItems: Math.max(0, current.meta.totalItems - 1) }
+            meta: {
+              ...current.meta,
+              totalItems: Math.max(0, current.meta.totalItems - 1),
+            },
           }
-        : current
-    )
-    stats.reload()
-  }
+        : current,
+    );
+    stats.reload();
+  };
 
-  const decide = async (item: KYCItem, decision: 'approve' | 'reject', reason?: string) => {
-    const id = String(item.id)
-    if (decision === 'approve') await approveKyc(id)
-    else await rejectKyc(id, reason ?? 'Verification rejected')
-    removePending(id)
-  }
+  const decide = async (
+    item: KYCItem,
+    decision: "approve" | "reject",
+    reason?: string,
+  ) => {
+    const id = String(item.id);
+    if (decision === "approve") await approveKyc(id);
+    else await rejectKyc(id, reason ?? "Verification rejected");
+    removePending(id);
+  };
 
   /** Inline Accept from the table row (Reject needs a reason, so it opens the drawer). */
   const acceptInline = async (item: KYCItem) => {
-    const id = String(item.id)
-    setDecidingId(id)
-    setActionError(null)
+    const id = String(item.id);
+    setDecidingId(id);
+    setActionError(null);
     try {
-      await decide(item, 'approve')
+      await decide(item, "approve");
     } catch (err) {
-      setActionError(`Couldn't approve ${item.name}: ${errorMessage(err)}`)
+      setActionError(`Couldn't approve ${item.name}: ${errorMessage(err)}`);
     } finally {
-      setDecidingId(null)
+      setDecidingId(null);
     }
-  }
+  };
 
-  const newLabel = tab === 'individuals' ? 'New user' : 'New org'
-  const rowOffset = (currentPage - 1) * pageSize
+  const newLabel = tab === "individuals" ? "New user" : "New org";
+  const rowOffset = (currentPage - 1) * pageSize;
 
   return (
     <>
-      {stats.error && <ErrorState message={stats.error} onRetry={stats.reload} compact />}
-      <MetricCards metrics={stats.data ?? toUserMetrics(undefined)} loading={stats.loading && !stats.data} />
+      {stats.error && (
+        <ErrorState message={stats.error} onRetry={stats.reload} compact />
+      )}
+      <MetricCards
+        metrics={stats.data ?? toUserMetrics(undefined)}
+        loading={stats.loading && !stats.data}
+      />
 
       <section className={styles.board}>
-        <div className={styles.tabs} role="tablist" aria-label="User groups" ref={tabsRef}>
+        <div
+          className={styles.tabs}
+          role="tablist"
+          aria-label="User groups"
+          ref={tabsRef}
+        >
           {indicator.ready && (
             <span
               className={styles.tabIndicator}
               style={{
                 width: indicator.width,
-                transform: `translateX(${indicator.x}px)`
+                transform: `translateX(${indicator.x}px)`,
               }}
             />
           )}
           {tabs.map((item) => {
-            const isActive = tab === item.key
+            const isActive = tab === item.key;
             return (
               <button
                 key={item.key}
                 type="button"
                 role="tab"
                 aria-selected={isActive}
-                className={`${styles.tab} ${isActive ? styles.tabActive : ''}`}
+                className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}
                 onClick={() => changeTab(item.key)}
               >
                 {item.label}
               </button>
-            )
+            );
           })}
         </div>
 
@@ -309,8 +357,8 @@ export const UsersBoard: React.FC = () => {
               placeholder="Search"
               className={styles.searchInput}
               onChange={(event) => {
-                setQuery(event.target.value)
-                setPage(1)
+                setQuery(event.target.value);
+                setPage(1);
               }}
             />
             <Search className={styles.searchIcon} />
@@ -324,15 +372,19 @@ export const UsersBoard: React.FC = () => {
                 aria-haspopup="listbox"
                 aria-expanded={filterOpen}
                 onClick={() => {
-                  setFilterOpen((open) => !open)
-                  setMenuId(null)
+                  setFilterOpen((open) => !open);
+                  setMenuId(null);
                 }}
               >
                 <span>{activeFilter.label}</span>
                 <ChevronDown className={styles.filterIcon} />
               </button>
               {filterOpen && (
-                <ul className={styles.menu} role="listbox" aria-label="Filter users">
+                <ul
+                  className={styles.menu}
+                  role="listbox"
+                  aria-label="Filter users"
+                >
                   {filterOptions.map((option) => (
                     <li key={option.value}>
                       <button
@@ -340,12 +392,12 @@ export const UsersBoard: React.FC = () => {
                         role="option"
                         aria-selected={option.value === filter}
                         className={`${styles.menuItem} ${
-                          option.value === filter ? styles.menuItemActive : ''
+                          option.value === filter ? styles.menuItemActive : ""
                         }`}
                         onClick={() => {
-                          setFilter(option.value)
-                          setPage(1)
-                          setFilterOpen(false)
+                          setFilter(option.value);
+                          setPage(1);
+                          setFilterOpen(false);
                         }}
                       >
                         {option.label}
@@ -356,7 +408,7 @@ export const UsersBoard: React.FC = () => {
               )}
             </div>
 
-            {tab !== 'pending' && (
+            {tab !== "pending" && (
               <button type="button" className={styles.newButton}>
                 <Plus className={styles.plusIcon} />
                 {newLabel}
@@ -368,12 +420,15 @@ export const UsersBoard: React.FC = () => {
         {actionError && <ErrorState message={actionError} compact />}
 
         <div className={styles.tableWrap}>
-          <div key={tab} className={`${styles.pane} ${direction < 0 ? styles.paneBack : ''}`}>
+          <div
+            key={tab}
+            className={`${styles.pane} ${direction < 0 ? styles.paneBack : ""}`}
+          >
             {active.error ? (
               <ErrorState message={active.error} onRetry={active.reload} />
             ) : (
               <>
-                {tab === 'individuals' && (
+                {tab === "individuals" && (
                   <IndividualsTable
                     rows={userRows}
                     loading={initialLoading}
@@ -385,7 +440,7 @@ export const UsersBoard: React.FC = () => {
                     onMenu={setMenuId}
                   />
                 )}
-                {tab === 'organizations' && (
+                {tab === "organizations" && (
                   <OrganizationsTable
                     rows={userRows}
                     loading={initialLoading}
@@ -397,7 +452,7 @@ export const UsersBoard: React.FC = () => {
                     onMenu={setMenuId}
                   />
                 )}
-                {tab === 'pending' && (
+                {tab === "pending" && (
                   <PendingTable
                     rows={pendingRows}
                     loading={initialLoading}
@@ -417,7 +472,8 @@ export const UsersBoard: React.FC = () => {
         {meta && meta.totalPages > 1 && (
           <div className={styles.footer}>
             <span className={styles.showing}>
-              Showing {visibleCount} of {meta.totalItems.toLocaleString('en-US')} items
+              Showing {visibleCount} of{" "}
+              {meta.totalItems.toLocaleString("en-US")} items
             </span>
             <div className={styles.pager}>
               <button
@@ -431,21 +487,27 @@ export const UsersBoard: React.FC = () => {
               </button>
               {pageWindow(currentPage, totalPages).map((pageNumber, index) =>
                 pageNumber === null ? (
-                  <span key={`gap-${index}`} className={styles.pageNumber} aria-hidden="true">
+                  <span
+                    key={`gap-${index}`}
+                    className={styles.pageNumber}
+                    aria-hidden="true"
+                  >
                     …
                   </span>
                 ) : (
                   <button
                     key={pageNumber}
                     type="button"
-                    className={`${styles.pageNumber} ${pageNumber === currentPage ? styles.pageNumberActive : ''}`}
-                    aria-current={pageNumber === currentPage ? 'page' : undefined}
+                    className={`${styles.pageNumber} ${pageNumber === currentPage ? styles.pageNumberActive : ""}`}
+                    aria-current={
+                      pageNumber === currentPage ? "page" : undefined
+                    }
                     disabled={active.loading}
                     onClick={() => setPage(pageNumber)}
                   >
                     {pageNumber}
                   </button>
-                )
+                ),
               )}
               <button
                 type="button"
@@ -470,57 +532,63 @@ export const UsersBoard: React.FC = () => {
           isOpen={Boolean(selectedKyc)}
           item={selectedKyc}
           onClose={() => setSelectedKyc(null)}
-          onAccept={(item) => decide(item, 'approve')}
-          onReject={(item, reason) => decide(item, 'reject', reason)}
+          onAccept={(item) => decide(item, "approve")}
+          onReject={(item, reason) => decide(item, "reject", reason)}
         />
       </section>
     </>
-  )
-}
+  );
+};
 
 /** Page numbers with gaps, e.g. 1 … 4 5 6 … 20 */
 const pageWindow = (current: number, total: number): (number | null)[] => {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
-  const pages = new Set([1, total, current - 1, current, current + 1])
-  const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b)
-  return sorted.flatMap((p, i) => (i > 0 && p - sorted[i - 1] > 1 ? [null, p] : [p]))
-}
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = new Set([1, total, current - 1, current, current + 1]);
+  const sorted = [...pages]
+    .filter((p) => p >= 1 && p <= total)
+    .sort((a, b) => a - b);
+  return sorted.flatMap((p, i) =>
+    i > 0 && p - sorted[i - 1] > 1 ? [null, p] : [p],
+  );
+};
 
 const statusLabel: Record<AccountStatus, string> = {
-  active: 'Active',
-  blocked: 'Blocked',
-  suspended: 'Suspended',
-  inactive: 'Inactive',
-  pending: 'Pending'
-}
+  active: "Active",
+  blocked: "Blocked",
+  suspended: "Suspended",
+  inactive: "Inactive",
+  pending: "Pending",
+};
 
 const dotClass: Record<AccountStatus, string> = {
   active: styles.dotActive,
   blocked: styles.dotBlocked,
   suspended: styles.dotSuspended,
   inactive: styles.dotInactive,
-  pending: styles.dotPending
-}
+  pending: styles.dotPending,
+};
 
 const StatusBadge: React.FC<{ status: AccountStatus }> = ({ status }) => (
   <span className={styles.status}>
     <span className={`${styles.statusDot} ${dotClass[status]}`} />
     {statusLabel[status]}
   </span>
-)
+);
 
 const CategoryBadge: React.FC<{ category: string }> = ({ category }) => (
-  <span className={`${styles.category} ${category === 'For-profit' ? styles.forProfit : styles.nonProfit}`}>
+  <span
+    className={`${styles.category} ${category === "For-profit" ? styles.forProfit : styles.nonProfit}`}
+  >
     {category}
   </span>
-)
+);
 
-const BlockToggle: React.FC<{ blocked: boolean; label: string; busy: boolean; onToggle: () => void }> = ({
-  blocked,
-  label,
-  busy,
-  onToggle
-}) => (
+const BlockToggle: React.FC<{
+  blocked: boolean;
+  label: string;
+  busy: boolean;
+  onToggle: () => void;
+}> = ({ blocked, label, busy, onToggle }) => (
   <button
     type="button"
     role="switch"
@@ -528,19 +596,25 @@ const BlockToggle: React.FC<{ blocked: boolean; label: string; busy: boolean; on
     aria-label={label}
     aria-busy={busy}
     disabled={busy}
-    className={`${styles.toggle} ${blocked ? styles.toggleOn : styles.toggleOff} ${busy ? styles.toggleBusy : ''}`}
+    className={`${styles.toggle} ${blocked ? styles.toggleOn : styles.toggleOff} ${busy ? styles.toggleBusy : ""}`}
     onClick={onToggle}
   >
-    <span className={styles.knob}>{blocked ? <Check className={styles.knobIcon} /> : <X className={styles.knobIcon} />}</span>
+    <span className={styles.knob}>
+      {blocked ? (
+        <Check className={styles.knobIcon} />
+      ) : (
+        <X className={styles.knobIcon} />
+      )}
+    </span>
   </button>
-)
+);
 
-const RowMenu: React.FC<{ id: string; href: string; open: boolean; onToggle: () => void }> = ({
-  id,
-  href,
-  open,
-  onToggle
-}) => (
+const RowMenu: React.FC<{
+  id: string;
+  href: string;
+  open: boolean;
+  onToggle: () => void;
+}> = ({ id, href, open, onToggle }) => (
   <div className={styles.rowMenu} data-menu-root>
     <button
       type="button"
@@ -559,25 +633,28 @@ const RowMenu: React.FC<{ id: string; href: string; open: boolean; onToggle: () 
       </div>
     )}
   </div>
-)
+);
 
-const EmptyRow: React.FC<{ colSpan: number; text?: string }> = ({ colSpan, text = 'No users match this view.' }) => (
+const EmptyRow: React.FC<{ colSpan: number; text?: string }> = ({
+  colSpan,
+  text = "No users match this view.",
+}) => (
   <tr>
     <td className={styles.empty} colSpan={colSpan}>
       {text}
     </td>
   </tr>
-)
+);
 
 interface UserTableProps {
-  rows: UserRow[]
-  loading: boolean
-  rowOffset: number
-  pageSize: number
-  menuId: string | null
-  pendingToggle: string | null
-  onToggle: (row: UserRow) => void
-  onMenu: (id: string | null) => void
+  rows: UserRow[];
+  loading: boolean;
+  rowOffset: number;
+  pageSize: number;
+  menuId: string | null;
+  pendingToggle: string | null;
+  onToggle: (row: UserRow) => void;
+  onMenu: (id: string | null) => void;
 }
 
 const IndividualsTable: React.FC<UserTableProps> = ({
@@ -588,7 +665,7 @@ const IndividualsTable: React.FC<UserTableProps> = ({
   menuId,
   pendingToggle,
   onToggle,
-  onMenu
+  onMenu,
 }) => (
   <table className={`${styles.table} ${styles.individualsTable}`}>
     <thead>
@@ -620,7 +697,7 @@ const IndividualsTable: React.FC<UserTableProps> = ({
             <BlockToggle
               blocked={user.blocked}
               busy={pendingToggle === user.id}
-              label={`${user.blocked ? 'Reinstate' : 'Ban or suspend'} ${user.name}`}
+              label={`${user.blocked ? "Reinstate" : "Ban or suspend"} ${user.name}`}
               onToggle={() => onToggle(user)}
             />
           </td>
@@ -636,7 +713,7 @@ const IndividualsTable: React.FC<UserTableProps> = ({
       ))}
     </tbody>
   </table>
-)
+);
 
 const OrganizationsTable: React.FC<UserTableProps> = ({
   rows,
@@ -646,7 +723,7 @@ const OrganizationsTable: React.FC<UserTableProps> = ({
   menuId,
   pendingToggle,
   onToggle,
-  onMenu
+  onMenu,
 }) => (
   <table className={`${styles.table} ${styles.organizationsTable}`}>
     <thead>
@@ -685,7 +762,7 @@ const OrganizationsTable: React.FC<UserTableProps> = ({
             <BlockToggle
               blocked={org.blocked}
               busy={pendingToggle === org.id}
-              label={`${org.blocked ? 'Reinstate' : 'Ban or suspend'} ${org.name}`}
+              label={`${org.blocked ? "Reinstate" : "Ban or suspend"} ${org.name}`}
               onToggle={() => onToggle(org)}
             />
           </td>
@@ -701,18 +778,27 @@ const OrganizationsTable: React.FC<UserTableProps> = ({
       ))}
     </tbody>
   </table>
-)
+);
 
 const PendingTable: React.FC<{
-  rows: KYCItem[]
-  loading: boolean
-  rowOffset: number
-  pageSize: number
-  decidingId: string | null
-  onView: (item: KYCItem) => void
-  onAccept: (item: KYCItem) => void
-  onReject: (item: KYCItem) => void
-}> = ({ rows, loading, rowOffset, pageSize, decidingId, onView, onAccept, onReject }) => (
+  rows: KYCItem[];
+  loading: boolean;
+  rowOffset: number;
+  pageSize: number;
+  decidingId: string | null;
+  onView: (item: KYCItem) => void;
+  onAccept: (item: KYCItem) => void;
+  onReject: (item: KYCItem) => void;
+}> = ({
+  rows,
+  loading,
+  rowOffset,
+  pageSize,
+  decidingId,
+  onView,
+  onAccept,
+  onReject,
+}) => (
   <table className={`${styles.table} ${styles.pendingTable}`}>
     <thead>
       <tr>
@@ -727,9 +813,11 @@ const PendingTable: React.FC<{
     </thead>
     <tbody>
       {loading && <SkeletonRows rows={pageSize} columns={7} />}
-      {!loading && rows.length === 0 && <EmptyRow colSpan={7} text="No verifications waiting for review." />}
+      {!loading && rows.length === 0 && (
+        <EmptyRow colSpan={7} text="No verifications waiting for review." />
+      )}
       {rows.map((org, index) => {
-        const deciding = decidingId === String(org.id)
+        const deciding = decidingId === String(org.id);
         return (
           <tr key={org.id}>
             <td>{rowOffset + index + 1}</td>
@@ -742,10 +830,14 @@ const PendingTable: React.FC<{
             <td>
               <CategoryBadge category={org.category} />
             </td>
-            <td>{org.email ?? '—'}</td>
-            <td>{org.timeAgo || '—'}</td>
+            <td>{org.email ?? "—"}</td>
+            <td>{org.timeAgo || "—"}</td>
             <td>
-              <button type="button" className={styles.viewButton} onClick={() => onView(org)}>
+              <button
+                type="button"
+                className={styles.viewButton}
+                onClick={() => onView(org)}
+              >
                 View ({org.docsSubmitted})
                 <ExternalLink className={styles.viewIcon} />
               </button>
@@ -764,22 +856,27 @@ const PendingTable: React.FC<{
                   type="button"
                   className={styles.acceptButton}
                   onClick={() => onAccept(org)}
-                  disabled={deciding || (org.details?.kind === 'organization' && !org.details.hasSubmission)}
+                  disabled={
+                    deciding ||
+                    (org.details?.kind === "organization" &&
+                      !org.details.hasSubmission)
+                  }
                   title={
-                    org.details?.kind === 'organization' && !org.details.hasSubmission
-                      ? 'Nothing has been submitted for review yet'
+                    org.details?.kind === "organization" &&
+                    !org.details.hasSubmission
+                      ? "Nothing has been submitted for review yet"
                       : undefined
                   }
                 >
-                  {deciding ? <InlineSpinner /> : 'Accept'}
+                  {deciding ? <InlineSpinner /> : "Accept"}
                 </button>
               </span>
             </td>
           </tr>
-        )
+        );
       })}
     </tbody>
   </table>
-)
+);
 
-export default UsersBoard
+export default UsersBoard;

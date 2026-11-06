@@ -326,12 +326,22 @@ export const DisbursalDialog: React.FC<DisbursalDialogProps> = ({
                 }}
               />
               {query.trim() && searching && (
-                <div className={styles.results} aria-busy="true" aria-live="polite">
+                <div
+                  className={styles.results}
+                  aria-busy="true"
+                  aria-live="polite"
+                >
                   <p className={styles.loadingLabel}>Searching recipients</p>
                   {[0, 1, 2].map((item) => (
                     <div key={item} className={styles.skeletonRow}>
                       <span className={styles.skeletonAvatar} />
-                      <span className={item === 1 ? styles.skeletonLineShort : styles.skeletonLine} />
+                      <span
+                        className={
+                          item === 1
+                            ? styles.skeletonLineShort
+                            : styles.skeletonLine
+                        }
+                      />
                     </div>
                   ))}
                 </div>
@@ -475,7 +485,9 @@ export const DisbursalDialog: React.FC<DisbursalDialogProps> = ({
                 onClick={submitAccount}
                 disabled={accountChecking}
               >
-                {accountChecking && <span className={styles.spinner} aria-hidden="true" />}
+                {accountChecking && (
+                  <span className={styles.spinner} aria-hidden="true" />
+                )}
                 {accountChecking ? "Checking account" : "Continue"}
               </button>
             </div>
@@ -528,7 +540,9 @@ export const DisbursalDialog: React.FC<DisbursalDialogProps> = ({
                 onClick={submitAmount}
                 disabled={sending}
               >
-                {sending && <span className={styles.spinner} aria-hidden="true" />}
+                {sending && (
+                  <span className={styles.spinner} aria-hidden="true" />
+                )}
                 {sending ? "Sending transfer" : "Continue"}
               </button>
               <button

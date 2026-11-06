@@ -1,13 +1,15 @@
-'use client'
+"use client";
 
-import React from 'react'
-import styles from './AvatarIllustration.module.css'
+import React from "react";
+import styles from "./AvatarIllustration.module.css";
 
 interface AvatarIllustrationProps {
-  className?: string
+  className?: string;
 }
 
-export const AvatarIllustration: React.FC<AvatarIllustrationProps> = ({ className = '' }) => {
+export const AvatarIllustration: React.FC<AvatarIllustrationProps> = ({
+  className = "",
+}) => {
   return (
     <div className={`${styles.container} ${className}`}>
       <svg
@@ -69,8 +71,7 @@ export const AvatarIllustration: React.FC<AvatarIllustrationProps> = ({ classNam
         />
       </svg>
     </div>
-  )
-}
+  );
+};
 
-export default AvatarIllustration
-
+export default AvatarIllustration;

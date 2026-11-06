@@ -61,7 +61,10 @@ const toMember = (raw: Raw): Member => ({
 
 /** PATCH /admin/users/{id}/role — Super Admin only. */
 const setRole = (id: string, role: UserRole) =>
-  apiRequest(`/admin/users/${encodeURIComponent(id)}/role`, { method: "PATCH", body: { role } });
+  apiRequest(`/admin/users/${encodeURIComponent(id)}/role`, {
+    method: "PATCH",
+    body: { role },
+  });
 
 /** Avatars looked up per user, shared across renders and the search panel. */
 const avatarCache = new Map<string, string | null>();
@@ -86,11 +89,16 @@ const withAvatars = async (
       // Fall through to per-user lookups.
     }
   }
-  const missing = members.filter((member) => !member.avatar && !avatarCache.has(member.id)).slice(0, 25);
+  const missing = members
+    .filter((member) => !member.avatar && !avatarCache.has(member.id))
+    .slice(0, 25);
   await Promise.all(
     missing.map(async (member) => {
       try {
-        const user = await apiRequest<Raw>(`/users/${encodeURIComponent(member.id)}`, { signal });
+        const user = await apiRequest<Raw>(
+          `/users/${encodeURIComponent(member.id)}`,
+          { signal },
+        );
         avatarCache.set(member.id, str(user, "avatar", "avatar.url") ?? null);
       } catch {
         if (!signal.aborted) avatarCache.set(member.id, null);
@@ -106,9 +114,15 @@ const withAvatars = async (
 const loadAdmins = async (signal: AbortSignal) => {
   // The users endpoint filters one role at a time.
   const pages = await Promise.all(
-    ADMIN_ROLES.map((role) => listUsers({ role, page: 1, limit: 100 }, { signal })),
+    ADMIN_ROLES.map((role) =>
+      listUsers({ role, page: 1, limit: 100 }, { signal }),
+    ),
   );
-  return withAvatars(pages.flatMap((page) => page.items.map(toMember)), signal, true);
+  return withAvatars(
+    pages.flatMap((page) => page.items.map(toMember)),
+    signal,
+    true,
+  );
 };
 
 export type AccessView = "roles" | "new";
@@ -120,7 +134,11 @@ interface AccessControlProps {
   onDone: () => void;
 }
 
-export const AccessControl: React.FC<AccessControlProps> = ({ view, onNewAdmin, onDone }) => {
+export const AccessControl: React.FC<AccessControlProps> = ({
+  view,
+  onNewAdmin,
+  onDone,
+}) => {
   if (view === "new") return <NewAdminView onDone={onDone} />;
   return <RolesView onNewAdmin={onNewAdmin} />;
 };
@@ -154,10 +172,13 @@ const RolesView: React.FC<{ onNewAdmin: () => void }> = ({ onNewAdmin }) => {
       await setRole(member.id, role);
       admins.mutate((current) => {
         const list = current ?? [];
-        if (role === "USER") return list.filter((entry) => entry.id !== member.id);
+        if (role === "USER")
+          return list.filter((entry) => entry.id !== member.id);
         const exists = list.some((entry) => entry.id === member.id);
         return exists
-          ? list.map((entry) => (entry.id === member.id ? { ...entry, role } : entry))
+          ? list.map((entry) =>
+              entry.id === member.id ? { ...entry, role } : entry,
+            )
           : [...list, { ...member, role }];
       });
     } catch (err) {
@@ -191,14 +212,28 @@ const RolesView: React.FC<{ onNewAdmin: () => void }> = ({ onNewAdmin }) => {
         <ul className={styles.list}>
           {list.map((entry) => {
             const isMe = entry.id === me?.id;
-            const member = isMe ? { ...entry, avatar: str(me, "avatar", "avatar.url") ?? entry.avatar } : entry;
+            const member = isMe
+              ? {
+                  ...entry,
+                  avatar: str(me, "avatar", "avatar.url") ?? entry.avatar,
+                }
+              : entry;
             const scopes = ROLE_SCOPES[member.role as AdminRole] ?? [];
             return (
               <li key={member.id} className={styles.member}>
-                <MemberIdentity member={member} suffix={isMe ? " (you)" : undefined} />
-                <div className={styles.tags} aria-label={`${ROLE_LABEL[member.role]} permissions`}>
+                <MemberIdentity
+                  member={member}
+                  suffix={isMe ? " (you)" : undefined}
+                />
+                <div
+                  className={styles.tags}
+                  aria-label={`${ROLE_LABEL[member.role]} permissions`}
+                >
                   {scopes.map((scope) => (
-                    <span key={scope.label} className={`${styles.tag} ${scope.tone}`}>
+                    <span
+                      key={scope.label}
+                      className={`${styles.tag} ${scope.tone}`}
+                    >
                       {scope.label}
                     </span>
                   ))}
@@ -211,14 +246,22 @@ const RolesView: React.FC<{ onNewAdmin: () => void }> = ({ onNewAdmin }) => {
                     aria-expanded={menuId === member.id}
                     disabled={!canManage || isMe || busyId === member.id}
                     title={
-                      isMe ? "You can't change your own role" : !canManage ? "Super admins only" : undefined
+                      isMe
+                        ? "You can't change your own role"
+                        : !canManage
+                          ? "Super admins only"
+                          : undefined
                     }
                     onClick={() => {
                       setConfirmRemove(null);
                       setMenuId(menuId === member.id ? null : member.id);
                     }}
                   >
-                    {busyId === member.id ? <InlineSpinner /> : <MoreHorizontal />}
+                    {busyId === member.id ? (
+                      <InlineSpinner />
+                    ) : (
+                      <MoreHorizontal />
+                    )}
                   </button>
                   {menuId === member.id && (
                     <div className={styles.menu} role="menu">
@@ -230,7 +273,9 @@ const RolesView: React.FC<{ onNewAdmin: () => void }> = ({ onNewAdmin }) => {
                           role="menuitemradio"
                           aria-checked={member.role === role}
                           className={`${styles.menuItem} ${member.role === role ? styles.menuItemActive : ""}`}
-                          onClick={() => member.role !== role && changeRole(member, role)}
+                          onClick={() =>
+                            member.role !== role && changeRole(member, role)
+                          }
                         >
                           {ROLE_LABEL[role]}
                         </button>
@@ -241,10 +286,14 @@ const RolesView: React.FC<{ onNewAdmin: () => void }> = ({ onNewAdmin }) => {
                         role="menuitem"
                         className={`${styles.menuItem} ${styles.menuDanger}`}
                         onClick={() =>
-                          confirmRemove === member.id ? changeRole(member, "USER") : setConfirmRemove(member.id)
+                          confirmRemove === member.id
+                            ? changeRole(member, "USER")
+                            : setConfirmRemove(member.id)
                         }
                       >
-                        {confirmRemove === member.id ? "Click again to remove" : "Remove admin access"}
+                        {confirmRemove === member.id
+                          ? "Click again to remove"
+                          : "Remove admin access"}
                       </button>
                     </div>
                   )}
@@ -255,18 +304,17 @@ const RolesView: React.FC<{ onNewAdmin: () => void }> = ({ onNewAdmin }) => {
         </ul>
       )}
 
-      <button
-        type="button"
-        className={styles.newAdmin}
-        onClick={onNewAdmin}
-      >
+      <button type="button" className={styles.newAdmin} onClick={onNewAdmin}>
         New admin
       </button>
     </>
   );
 };
 
-const MemberIdentity: React.FC<{ member: Member; suffix?: string }> = ({ member, suffix }) => (
+const MemberIdentity: React.FC<{ member: Member; suffix?: string }> = ({
+  member,
+  suffix,
+}) => (
   <div className={styles.identity}>
     <span className={styles.avatar}>
       {member.avatar ? (
@@ -293,7 +341,9 @@ interface Invitee {
   error?: string;
 }
 
-const toSearchMember = (user: Awaited<ReturnType<typeof searchUsers>>[number]): Member => ({
+const toSearchMember = (
+  user: Awaited<ReturnType<typeof searchUsers>>[number],
+): Member => ({
   id: user.id,
   email: user.email ?? user.phone ?? "—",
   name: userName({ ...user, email: undefined, phone: undefined }),
@@ -325,7 +375,10 @@ const NewAdminView: React.FC<{ onDone: () => void }> = ({ onDone }) => {
       setLookupError("You can't change your own role.");
       return;
     }
-    setInvitees((current) => [...current, { member, role: "", status: "idle" }]);
+    setInvitees((current) => [
+      ...current,
+      { member, role: "", status: "idle" },
+    ]);
     setQuery("");
     setChoices([]);
     setLookupError(null);
@@ -346,7 +399,9 @@ const NewAdminView: React.FC<{ onDone: () => void }> = ({ onDone }) => {
       const matches = (await searchUsers(term)).map(toSearchMember);
       const needle = term.replace(/^@/, "").toLowerCase();
       const exact = matches.find(
-        (member) => member.email.toLowerCase() === needle || member.name.toLowerCase() === needle,
+        (member) =>
+          member.email.toLowerCase() === needle ||
+          member.name.toLowerCase() === needle,
       );
       if (exact) stage(exact);
       else if (matches.length === 1) stage(matches[0]);
@@ -360,9 +415,14 @@ const NewAdminView: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   };
 
   const update = (id: string, patch: Partial<Invitee>) =>
-    setInvitees((current) => current.map((entry) => (entry.member.id === id ? { ...entry, ...patch } : entry)));
+    setInvitees((current) =>
+      current.map((entry) =>
+        entry.member.id === id ? { ...entry, ...patch } : entry,
+      ),
+    );
 
-  const ready = invitees.length > 0 && invitees.every((entry) => entry.role) && !saving;
+  const ready =
+    invitees.length > 0 && invitees.every((entry) => entry.role) && !saving;
 
   const done = async () => {
     if (!ready) return;
@@ -386,8 +446,14 @@ const NewAdminView: React.FC<{ onDone: () => void }> = ({ onDone }) => {
 
   return (
     <div className={styles.newView}>
-      <p className={styles.inviteLabel}>Enter the email of someone you want to invite</p>
-      {!canManage && <p className={styles.hint}>Only super admins can assign roles — saving will be refused.</p>}
+      <p className={styles.inviteLabel}>
+        Enter the email of someone you want to invite
+      </p>
+      {!canManage && (
+        <p className={styles.hint}>
+          Only super admins can assign roles — saving will be refused.
+        </p>
+      )}
 
       {invitees.length > 0 && (
         <ul className={styles.invitees}>
@@ -395,17 +461,25 @@ const NewAdminView: React.FC<{ onDone: () => void }> = ({ onDone }) => {
             <li key={entry.member.id} className={styles.invitee}>
               <div className={styles.inviteeRow}>
                 <span className={styles.inviteeEmail} title={entry.member.name}>
-                  <span className={styles.bullet} aria-hidden="true">•</span>
+                  <span className={styles.bullet} aria-hidden="true">
+                    •
+                  </span>
                   {entry.member.email}
                 </span>
                 <span className={styles.roleSelect}>
                   <select
                     value={entry.role}
                     aria-label={`Role for ${entry.member.email}`}
-                    disabled={entry.status === "saving" || entry.status === "saved"}
+                    disabled={
+                      entry.status === "saving" || entry.status === "saved"
+                    }
                     className={entry.role ? undefined : styles.rolePlaceholder}
                     onChange={(event) =>
-                      update(entry.member.id, { role: event.target.value as AdminRole, status: "idle", error: undefined })
+                      update(entry.member.id, {
+                        role: event.target.value as AdminRole,
+                        status: "idle",
+                        error: undefined,
+                      })
                     }
                   >
                     <option value="" disabled>
@@ -417,7 +491,10 @@ const NewAdminView: React.FC<{ onDone: () => void }> = ({ onDone }) => {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className={styles.roleChevron} aria-hidden="true" />
+                  <ChevronDown
+                    className={styles.roleChevron}
+                    aria-hidden="true"
+                  />
                 </span>
                 <button
                   type="button"
@@ -425,14 +502,26 @@ const NewAdminView: React.FC<{ onDone: () => void }> = ({ onDone }) => {
                   aria-label={`Remove ${entry.member.email}`}
                   disabled={entry.status === "saving"}
                   onClick={() =>
-                    setInvitees((current) => current.filter((item) => item.member.id !== entry.member.id))
+                    setInvitees((current) =>
+                      current.filter(
+                        (item) => item.member.id !== entry.member.id,
+                      ),
+                    )
                   }
                 >
-                  {entry.status === "saving" ? <InlineSpinner /> : <Trash2 aria-hidden="true" />}
+                  {entry.status === "saving" ? (
+                    <InlineSpinner />
+                  ) : (
+                    <Trash2 aria-hidden="true" />
+                  )}
                 </button>
               </div>
-              {entry.status === "error" && <p className={styles.inviteError}>{entry.error}</p>}
-              {entry.status === "saved" && <p className={styles.inviteSaved}>Role assigned</p>}
+              {entry.status === "error" && (
+                <p className={styles.inviteError}>{entry.error}</p>
+              )}
+              {entry.status === "saved" && (
+                <p className={styles.inviteSaved}>Role assigned</p>
+              )}
             </li>
           ))}
         </ul>
@@ -470,7 +559,11 @@ const NewAdminView: React.FC<{ onDone: () => void }> = ({ onDone }) => {
           <ul className={styles.list}>
             {choices.map((member) => (
               <li key={member.id}>
-                <button type="button" className={styles.choice} onClick={() => stage(member)}>
+                <button
+                  type="button"
+                  className={styles.choice}
+                  onClick={() => stage(member)}
+                >
                   <MemberIdentity member={member} />
                 </button>
               </li>
@@ -479,7 +572,12 @@ const NewAdminView: React.FC<{ onDone: () => void }> = ({ onDone }) => {
         </div>
       )}
 
-      <button type="button" className={styles.done} disabled={!ready} onClick={done}>
+      <button
+        type="button"
+        className={styles.done}
+        disabled={!ready}
+        onClick={done}
+      >
         {saving ? <InlineSpinner /> : null} Done
       </button>
     </div>

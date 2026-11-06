@@ -60,7 +60,9 @@
   border: 1px solid #eef2f7;
   border-radius: 18px;
   background: #ffffff;
-  transition: border-color 150ms ease, background-color 150ms ease;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
 }
 
 .item:hover {

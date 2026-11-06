@@ -1,12 +1,12 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { Menu } from 'lucide-react'
-import { useSidebar } from '../../context/SidebarContext'
-import styles from './TopNavbar.module.css'
+import React from "react";
+import { Menu } from "lucide-react";
+import { useSidebar } from "../../context/SidebarContext";
+import styles from "./TopNavbar.module.css";
 
 export const TopNavbar: React.FC = () => {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar } = useSidebar();
 
   return (
     <header className={`${styles.header} ${styles.headerCompact}`}>
@@ -19,7 +19,7 @@ export const TopNavbar: React.FC = () => {
         <Menu className={styles.menuIcon} />
       </button>
     </header>
-  )
-}
+  );
+};
 
-export default TopNavbar
+export default TopNavbar;

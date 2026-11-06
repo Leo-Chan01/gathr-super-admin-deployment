@@ -1,51 +1,56 @@
-'use client'
+"use client";
 
-import React, { useState } from 'react'
-import Image from 'next/image'
-import { FileText, X } from 'lucide-react'
-import AvatarIllustration from './AvatarIllustration'
-import { InlineSpinner } from '../common/AsyncState'
-import styles from './FlaggedCard.module.css'
+import React, { useState } from "react";
+import Image from "next/image";
+import { FileText, X } from "lucide-react";
+import AvatarIllustration from "./AvatarIllustration";
+import { InlineSpinner } from "../common/AsyncState";
+import styles from "./FlaggedCard.module.css";
 
 export interface FlaggedItem {
-  id: string | number
-  name?: string
-  username?: string
-  category?: string
-  timeAgo: string
-  comment?: string
-  hasMoreComment?: boolean
-  targetTitle: string
-  targetImage?: string
-  avatarUrl?: string
-  reason?: string
-  reportCount?: number
+  id: string | number;
+  name?: string;
+  username?: string;
+  category?: string;
+  timeAgo: string;
+  comment?: string;
+  hasMoreComment?: boolean;
+  targetTitle: string;
+  targetImage?: string;
+  avatarUrl?: string;
+  reason?: string;
+  reportCount?: number;
 }
 
 interface FlaggedCardProps {
-  item: FlaggedItem
-  onReview?: (item: FlaggedItem) => void
-  onDismiss?: (item: FlaggedItem) => void
+  item: FlaggedItem;
+  onReview?: (item: FlaggedItem) => void;
+  onDismiss?: (item: FlaggedItem) => void;
   /** Disables actions while a mutation for this card is in flight. */
-  busy?: boolean
+  busy?: boolean;
 }
 
-const PREVIEW_LENGTH = 60
+const PREVIEW_LENGTH = 60;
 
 export const FlaggedCard: React.FC<FlaggedCardProps> = ({
   item,
   onReview,
   onDismiss,
-  busy = false
+  busy = false,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false);
   const username =
     item.username ||
-    (item.name ? `@${item.name.toLowerCase().replace(/\s+/g, '_')}` : 'Anonymous')
-  const comment = item.comment || 'No reason given'
-  const canExpand = item.hasMoreComment !== false && comment.length > PREVIEW_LENGTH
+    (item.name
+      ? `@${item.name.toLowerCase().replace(/\s+/g, "_")}`
+      : "Anonymous");
+  const comment = item.comment || "No reason given";
+  const canExpand =
+    item.hasMoreComment !== false && comment.length > PREVIEW_LENGTH;
   const shownComment =
-    canExpand && !isExpanded ? `${comment.slice(0, PREVIEW_LENGTH).trimEnd()}…` : comment
+    canExpand && !isExpanded
+      ? `${comment.slice(0, PREVIEW_LENGTH).trimEnd()}…`
+      : comment;
 
   return (
     <div className={styles.card} aria-busy={busy}>
@@ -72,14 +77,14 @@ export const FlaggedCard: React.FC<FlaggedCardProps> = ({
           </div>
 
           <p className={styles.commentText}>
-            {shownComment}{' '}
+            {shownComment}{" "}
             {canExpand && (
               <button
                 type="button"
                 className={styles.moreButton}
                 onClick={() => setIsExpanded(!isExpanded)}
               >
-                {isExpanded ? 'less' : 'more'}
+                {isExpanded ? "less" : "more"}
               </button>
             )}
           </p>
@@ -129,7 +134,7 @@ export const FlaggedCard: React.FC<FlaggedCardProps> = ({
         </button>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default FlaggedCard
+export default FlaggedCard;

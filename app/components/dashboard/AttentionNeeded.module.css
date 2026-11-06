@@ -20,14 +20,14 @@
 .title {
   font-size: 18px;
   font-weight: 800;
-  color: #1E293B;
+  color: #1e293b;
   letter-spacing: -0.4px;
   margin: 0;
 }
 
 .subtitle {
   font-size: 12px;
-  color: #6B7280;
+  color: #6b7280;
   margin-top: 2px;
 }
 
@@ -53,7 +53,7 @@
   cursor: pointer;
   white-space: nowrap;
   font-family: inherit;
-  color: #6B7280;
+  color: #6b7280;
   font-weight: 500;
   transition: color 0.28s ease;
 }
@@ -64,7 +64,7 @@
 
 .tabButtonActive {
   font-weight: 700;
-  color: #1E293B;
+  color: #1e293b;
 }
 
 .tabIndicator {
@@ -73,7 +73,7 @@
   bottom: 0;
   height: 2.5px;
   border-radius: 9999px;
-  background-color: #FD5E53;
+  background-color: #fd5e53;
   pointer-events: none;
   transition:
     transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
@@ -129,14 +129,14 @@
 
 .showingText {
   font-size: 12px;
-  color: #9CA3AF;
+  color: #9ca3af;
   font-weight: 500;
 }
 
 .viewAllButton {
   font-size: 13px;
   font-weight: 700;
-  color: #FD5E53;
+  color: #fd5e53;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -145,7 +145,7 @@
 }
 
 .viewAllButton:hover {
-  color: #E0483E;
+  color: #e0483e;
   text-decoration: underline;
 }
 

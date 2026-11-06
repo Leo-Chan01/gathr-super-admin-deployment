@@ -1,31 +1,40 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { X } from 'lucide-react'
-import AvatarIllustration from '../dashboard/AvatarIllustration'
-import { ErrorState } from '../common/AsyncState'
-import { getWithdrawal } from '../../lib/api/admin'
-import { toWithdrawalDetail } from '../../lib/api/adapters'
-import { useResource } from '../../lib/hooks/useResource'
-import drawer from '../dashboard/KYCDetailDrawer.module.css'
-import styles from '../common/DetailRows.module.css'
+import React from "react";
+import { X } from "lucide-react";
+import AvatarIllustration from "../dashboard/AvatarIllustration";
+import { ErrorState } from "../common/AsyncState";
+import { getWithdrawal } from "../../lib/api/admin";
+import { toWithdrawalDetail } from "../../lib/api/adapters";
+import { useResource } from "../../lib/hooks/useResource";
+import drawer from "../dashboard/KYCDetailDrawer.module.css";
+import styles from "../common/DetailRows.module.css";
 
 interface WithdrawalDetailDrawerProps {
-  withdrawalId: string | null
-  onClose: () => void
+  withdrawalId: string | null;
+  onClose: () => void;
 }
 
-export const WithdrawalDetailDrawer: React.FC<WithdrawalDetailDrawerProps> = ({ withdrawalId, onClose }) => {
-  if (!withdrawalId) return null
-  return <Panel key={withdrawalId} withdrawalId={withdrawalId} onClose={onClose} />
-}
+export const WithdrawalDetailDrawer: React.FC<WithdrawalDetailDrawerProps> = ({
+  withdrawalId,
+  onClose,
+}) => {
+  if (!withdrawalId) return null;
+  return (
+    <Panel key={withdrawalId} withdrawalId={withdrawalId} onClose={onClose} />
+  );
+};
 
-const Panel: React.FC<{ withdrawalId: string; onClose: () => void }> = ({ withdrawalId, onClose }) => {
+const Panel: React.FC<{ withdrawalId: string; onClose: () => void }> = ({
+  withdrawalId,
+  onClose,
+}) => {
   const withdrawal = useResource(
-    (signal) => getWithdrawal(withdrawalId, { signal }).then(toWithdrawalDetail),
-    [withdrawalId]
-  )
-  const detail = withdrawal.data
+    (signal) =>
+      getWithdrawal(withdrawalId, { signal }).then(toWithdrawalDetail),
+    [withdrawalId],
+  );
+  const detail = withdrawal.data;
 
   return (
     <div className={drawer.overlay} onClick={onClose}>
@@ -40,7 +49,9 @@ const Panel: React.FC<{ withdrawalId: string; onClose: () => void }> = ({ withdr
           <div className={drawer.headerLeft}>
             <AvatarIllustration />
             <div className={drawer.headerInfo}>
-              <h2 className={drawer.title}>{detail?.item.name ?? 'Withdrawal request'}</h2>
+              <h2 className={drawer.title}>
+                {detail?.item.name ?? "Withdrawal request"}
+              </h2>
               {detail && (
                 <div className={drawer.metaRow}>
                   <span className={drawer.badge}>{detail.item.category}</span>
@@ -50,7 +61,12 @@ const Panel: React.FC<{ withdrawalId: string; onClose: () => void }> = ({ withdr
               )}
             </div>
           </div>
-          <button type="button" className={drawer.closeButton} onClick={onClose} aria-label="Close drawer">
+          <button
+            type="button"
+            className={drawer.closeButton}
+            onClick={onClose}
+            aria-label="Close drawer"
+          >
             <X className={drawer.closeIcon} />
           </button>
         </div>
@@ -63,7 +79,9 @@ const Panel: React.FC<{ withdrawalId: string; onClose: () => void }> = ({ withdr
             <span />
           </div>
         )}
-        {withdrawal.error && <ErrorState message={withdrawal.error} onRetry={withdrawal.reload} />}
+        {withdrawal.error && (
+          <ErrorState message={withdrawal.error} onRetry={withdrawal.reload} />
+        )}
 
         {detail && (
           <dl className={styles.rows}>
@@ -78,13 +96,17 @@ const Panel: React.FC<{ withdrawalId: string; onClose: () => void }> = ({ withdr
 
         <div className={styles.spacer} />
         <div className={drawer.footerActions}>
-          <button type="button" className={drawer.cancelRejectButton} onClick={onClose}>
+          <button
+            type="button"
+            className={drawer.cancelRejectButton}
+            onClick={onClose}
+          >
             Close
           </button>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default WithdrawalDetailDrawer
+export default WithdrawalDetailDrawer;

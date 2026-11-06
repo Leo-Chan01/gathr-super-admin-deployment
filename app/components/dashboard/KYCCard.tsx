@@ -1,58 +1,58 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { ChevronRight } from 'lucide-react'
-import AvatarIllustration from './AvatarIllustration'
-import styles from './KYCCard.module.css'
+import React from "react";
+import { ChevronRight } from "lucide-react";
+import AvatarIllustration from "./AvatarIllustration";
+import styles from "./KYCCard.module.css";
 
 export interface KYCDocument {
-  id: string
-  title: string
-  fileType: string
-  fileSize: string
-  status: 'Uploaded' | 'Pending' | 'Rejected'
-  url?: string
+  id: string;
+  title: string;
+  fileType: string;
+  fileSize: string;
+  status: "Uploaded" | "Pending" | "Rejected";
+  url?: string;
 }
 
 /** Everything the detail drawer shows; shape differs by account kind. */
 export interface KYCDetails {
-  kind: 'organization' | 'individual'
-  imageUrl?: string
-  fullName?: string
-  username?: string
-  email?: string
-  emailVerified: boolean
-  phone?: string
-  phoneVerified: boolean
-  signedUpAt: string
+  kind: "organization" | "individual";
+  imageUrl?: string;
+  fullName?: string;
+  username?: string;
+  email?: string;
+  emailVerified: boolean;
+  phone?: string;
+  phoneVerified: boolean;
+  signedUpAt: string;
   /** Organizations only: false when no business profile was submitted yet. */
-  hasSubmission: boolean
-  submittedAt?: string
-  location?: string
-  taxId?: string
-  foundedAt?: string
-  verificationStatus?: string
+  hasSubmission: boolean;
+  submittedAt?: string;
+  location?: string;
+  taxId?: string;
+  foundedAt?: string;
+  verificationStatus?: string;
   /** Reason from an earlier rejection — present on resubmissions. */
-  previousRejection?: string
-  affiliation?: { name: string; taxId?: string; orgId?: string }
+  previousRejection?: string;
+  affiliation?: { name: string; taxId?: string; orgId?: string };
 }
 
 export interface KYCItem {
   /** User ID — the KYC approve/reject endpoints are keyed by user. */
-  id: string | number
-  name: string
-  email?: string
-  category: string
-  timeAgo: string
-  docsSubmitted: number
-  totalDocs: number
-  documents?: KYCDocument[]
-  details?: KYCDetails
+  id: string | number;
+  name: string;
+  email?: string;
+  category: string;
+  timeAgo: string;
+  docsSubmitted: number;
+  totalDocs: number;
+  documents?: KYCDocument[];
+  details?: KYCDetails;
 }
 
 interface KYCCardProps {
-  item: KYCItem
-  onClick?: () => void
+  item: KYCItem;
+  onClick?: () => void;
 }
 
 export const KYCCard: React.FC<KYCCardProps> = ({ item, onClick }) => {
@@ -95,8 +95,7 @@ export const KYCCard: React.FC<KYCCardProps> = ({ item, onClick }) => {
         <ChevronRight className={styles.chevronIcon} />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default KYCCard
-
+export default KYCCard;

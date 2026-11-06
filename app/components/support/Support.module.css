@@ -279,7 +279,9 @@ td.muted {
   padding: 12px;
   border: 1px solid #e5e7eb;
   border-radius: 18px;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 
 .composerNote {

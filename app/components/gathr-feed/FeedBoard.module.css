@@ -118,7 +118,9 @@
   height: 3px;
   border-radius: 999px;
   background: #fd5e53;
-  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), width 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.38s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .tabActive {
@@ -149,7 +151,9 @@
 .post {
   padding: 14px 14px 12px;
   cursor: pointer;
-  transition: background-color 0.35s ease, border-color 0.35s ease;
+  transition:
+    background-color 0.35s ease,
+    border-color 0.35s ease;
 }
 
 .postSelected {
@@ -284,7 +288,9 @@
   padding: 0;
   background: rgba(255, 255, 255, 0.45);
   cursor: pointer;
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.35s ease;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.35s ease;
 }
 
 .dotActive {
@@ -841,7 +847,7 @@
 }
 
 .comment .commentRail::after {
-  content: '';
+  content: "";
   position: absolute;
   left: var(--spine-x);
   top: 36px;
@@ -900,7 +906,7 @@
 }
 
 .replyTree > .commentBranch:not(:last-child)::before {
-  content: '';
+  content: "";
   position: absolute;
   left: calc(var(--reply-indent) * -1 + var(--spine-x));
   top: 18px;
@@ -914,7 +920,11 @@
   animation: none;
 }
 
-.replyCollapseOpen > .replyCollapseInner > .replyTree > .commentBranch > .comment {
+.replyCollapseOpen
+  > .replyCollapseInner
+  > .replyTree
+  > .commentBranch
+  > .comment {
   animation: nodeIn 0.46s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -1520,7 +1530,9 @@
   height: 3px;
   border-radius: 999px;
   background: #1e293b;
-  transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), width 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.38s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .profilePane {
@@ -1862,7 +1874,11 @@
   .commentBranchOpen > .comment .commentRail::after,
   .replyTree > .commentBranch:not(:last-child)::before,
   .replyForm,
-  .replyCollapseOpen > .replyCollapseInner > .replyTree > .commentBranch > .comment,
+  .replyCollapseOpen
+    > .replyCollapseInner
+    > .replyTree
+    > .commentBranch
+    > .comment,
   .photoCurrent,
   .photoLeaving,
   .crumb,

@@ -1,7 +1,7 @@
-import React from 'react'
-import { Search } from 'lucide-react'
-import DashboardOverview from '../components/dashboard/DashboardOverview'
-import styles from './Dashboard.module.css'
+import React from "react";
+import { Search } from "lucide-react";
+import DashboardOverview from "../components/dashboard/DashboardOverview";
+import styles from "./Dashboard.module.css";
 
 const DashboardPage = () => {
   return (
@@ -21,7 +21,7 @@ const DashboardPage = () => {
 
       <DashboardOverview />
     </div>
-  )
-}
+  );
+};
 
-export default DashboardPage
+export default DashboardPage;

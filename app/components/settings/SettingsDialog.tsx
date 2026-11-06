@@ -29,7 +29,10 @@ const TYPES = [
 /** There's no preferences endpoint yet, so toggles persist per browser. */
 const PREFS_KEY = "gathr.admin.notificationPrefs";
 
-type Prefs = { channels: Record<string, boolean>; types: Record<string, boolean> };
+type Prefs = {
+  channels: Record<string, boolean>;
+  types: Record<string, boolean>;
+};
 
 const DEFAULT_PREFS: Prefs = {
   channels: { sms: true, email: true },
@@ -39,7 +42,9 @@ const DEFAULT_PREFS: Prefs = {
 const readPrefs = (): Prefs => {
   try {
     const raw = window.localStorage.getItem(PREFS_KEY);
-    return raw ? { ...DEFAULT_PREFS, ...(JSON.parse(raw) as Prefs) } : DEFAULT_PREFS;
+    return raw
+      ? { ...DEFAULT_PREFS, ...(JSON.parse(raw) as Prefs) }
+      : DEFAULT_PREFS;
   } catch {
     return DEFAULT_PREFS;
   }
@@ -245,7 +250,11 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         <div
           key={`${tab}-${accessView}`}
           className={`${styles.panel} ${tab === "access" ? styles.panelColumn : ""} ${
-            motion === "forward" ? styles.panelForward : motion === "back" ? styles.panelBack : ""
+            motion === "forward"
+              ? styles.panelForward
+              : motion === "back"
+                ? styles.panelBack
+                : ""
           }`}
         >
           <h2 id={titleId} className={styles.heading}>
@@ -275,7 +284,11 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   <div className={styles.avatar} aria-busy={uploading}>
                     {avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={avatarUrl} alt="" className={styles.avatarPhoto} />
+                      <img
+                        src={avatarUrl}
+                        alt=""
+                        className={styles.avatarPhoto}
+                      />
                     ) : (
                       <User className={styles.avatarIcon} strokeWidth={1.75} />
                     )}
@@ -322,13 +335,18 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   />
                 ) : (
                   <p className={styles.name}>
-                    {savingName ? <InlineSpinner /> : null} {fullName || "Add your name"}
+                    {savingName ? <InlineSpinner /> : null}{" "}
+                    {fullName || "Add your name"}
                   </p>
                 )}
                 <p className={styles.email}>
                   {user?.email ?? "No email on file"}
                   {user?.email && (
-                    <span className={user.emailVerified ? styles.tagOk : styles.tagMissing}>
+                    <span
+                      className={
+                        user.emailVerified ? styles.tagOk : styles.tagMissing
+                      }
+                    >
                       {user.emailVerified ? "Verified" : "Unverified"}
                     </span>
                   )}
@@ -366,7 +384,10 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                       onClick={() =>
                         updatePrefs((current) => ({
                           ...current,
-                          channels: { ...current.channels, [item.id]: !current.channels[item.id] },
+                          channels: {
+                            ...current.channels,
+                            [item.id]: !current.channels[item.id],
+                          },
                         }))
                       }
                     >
@@ -390,7 +411,10 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                       onClick={() =>
                         updatePrefs((current) => ({
                           ...current,
-                          types: { ...current.types, [item.id]: !current.types[item.id] },
+                          types: {
+                            ...current.types,
+                            [item.id]: !current.types[item.id],
+                          },
                         }))
                       }
                     >

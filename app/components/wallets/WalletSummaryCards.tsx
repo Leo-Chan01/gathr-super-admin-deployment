@@ -1,7 +1,7 @@
-import React from 'react'
-import Image from 'next/image'
-import { walletSummary } from './walletData'
-import styles from './WalletSummaryCards.module.css'
+import React from "react";
+import Image from "next/image";
+import { walletSummary } from "./walletData";
+import styles from "./WalletSummaryCards.module.css";
 
 export const WalletSummaryCards: React.FC = () => {
   return (
@@ -30,7 +30,7 @@ export const WalletSummaryCards: React.FC = () => {
         />
       </article>
     </div>
-  )
-}
+  );
+};
 
-export default WalletSummaryCards
+export default WalletSummaryCards;

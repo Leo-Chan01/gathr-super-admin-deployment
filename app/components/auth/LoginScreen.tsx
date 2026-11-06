@@ -32,7 +32,13 @@ export const LoginScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const node = (view === "email" ? emailPane : view === "password" ? passwordPane : otpPane).current;
+    const node = (
+      view === "email"
+        ? emailPane
+        : view === "password"
+          ? passwordPane
+          : otpPane
+    ).current;
     if (!node) return;
     const measure = () => setStageHeight(node.offsetHeight);
     const observer = new ResizeObserver(() => measure());
@@ -45,7 +51,8 @@ export const LoginScreen: React.FC = () => {
   }, [view]);
 
   useEffect(() => {
-    const input = view === "email" ? emailRef : view === "password" ? passwordRef : otpRef;
+    const input =
+      view === "email" ? emailRef : view === "password" ? passwordRef : otpRef;
     const frame = window.requestAnimationFrame(() => input.current?.focus());
     return () => window.cancelAnimationFrame(frame);
   }, [view]);
@@ -57,7 +64,9 @@ export const LoginScreen: React.FC = () => {
 
   const paneClass = (pane: LoginView) => {
     if (pane === view) return styles.viewOn;
-    return order.indexOf(pane) < order.indexOf(view) ? styles.viewOffUp : styles.viewOffDown;
+    return order.indexOf(pane) < order.indexOf(view)
+      ? styles.viewOffUp
+      : styles.viewOffDown;
   };
 
   const continueWithEmail = (event: React.FormEvent) => {
@@ -203,7 +212,8 @@ export const LoginScreen: React.FC = () => {
             onSubmit={submitOtp}
           >
             <p className={styles.hint}>
-              Enter the 6-digit code sent to <strong>{otpDestination || email}</strong>
+              Enter the 6-digit code sent to{" "}
+              <strong>{otpDestination || email}</strong>
             </p>
             <input
               ref={otpRef}
@@ -214,7 +224,9 @@ export const LoginScreen: React.FC = () => {
               maxLength={6}
               value={otp}
               disabled={busy === "otp"}
-              onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              onChange={(event) =>
+                setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
+              }
               aria-label="Verification code"
               aria-invalid={Boolean(error && view === "otp")}
             />
@@ -224,7 +236,9 @@ export const LoginScreen: React.FC = () => {
               className={styles.submit}
               disabled={busy === "otp" || otp.length < 6}
             >
-              {busy === "otp" && <span className={styles.spinner} aria-hidden="true" />}
+              {busy === "otp" && (
+                <span className={styles.spinner} aria-hidden="true" />
+              )}
               {busy === "otp" ? "Verifying" : "Verify"}
             </button>
             <button

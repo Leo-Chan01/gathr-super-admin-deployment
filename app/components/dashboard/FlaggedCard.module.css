@@ -1,7 +1,7 @@
 .card {
   border-radius: 28px;
   padding: 16px 18px;
-  border: 0.5px solid #1F1F1F8C;
+  border: 0.5px solid #1f1f1f8c;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -22,7 +22,7 @@
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
-  background-color: #F1F5F9;
+  background-color: #f1f5f9;
 }
 
 .avatarImage {
@@ -55,19 +55,19 @@
 .username {
   font-size: 14px;
   font-weight: 700;
-  color: #1E293B;
+  color: #1e293b;
   letter-spacing: -0.2px;
 }
 
 .timeAgo {
   font-size: 13px;
-  color: #8E8E93;
+  color: #8e8e93;
   font-weight: 400;
 }
 
 .commentText {
   font-size: 13px;
-  color: #71717A;
+  color: #71717a;
   line-height: 1.35;
   margin: 0;
   word-break: break-word;
@@ -79,7 +79,7 @@
   padding: 0;
   margin: 0;
   margin-left: 2px;
-  color: #FD5E53;
+  color: #fd5e53;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -98,7 +98,7 @@
   gap: 14px;
   padding: 8px 16px 8px 8px;
   border-radius: 20px;
-  border: 0.5px solid #1F1F1F8C;
+  border: 0.5px solid #1f1f1f8c;
 }
 
 .quotedImageContainer {
@@ -140,7 +140,7 @@
 .quotedTitle {
   font-size: 14px;
   font-weight: 600;
-  color: #18181B;
+  color: #18181b;
   line-height: 1.35;
   margin: 0;
   flex: 1;
@@ -163,11 +163,11 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 0.5px solid #1F1F1F8C;;
+  border: 0.5px solid #1f1f1f8c;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #18181B;
+  color: #18181b;
   cursor: pointer;
   transition: all 150ms ease;
   flex-shrink: 0;
@@ -175,7 +175,7 @@
 }
 
 .dismissButton:hover {
-  border-color: #A1A1AA;
+  border-color: #a1a1aa;
   transform: scale(1.04);
 }
 
@@ -186,7 +186,7 @@
 .dismissIcon {
   width: 18px;
   height: 18px;
-  color: #18181B;
+  color: #18181b;
   stroke-width: 2;
 }
 
@@ -194,8 +194,8 @@
   padding: 10px 32px;
   border-radius: 9999px;
   border: none;
-  background-color: #FD5E53;
-  color: #FFFFFF;
+  background-color: #fd5e53;
+  color: #ffffff;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -205,11 +205,10 @@
 }
 
 .reviewButton:hover {
-  background-color: #E0483E;    
+  background-color: #e0483e;
   transform: translateY(-1px);
 }
 
 .reviewButton:active {
   transform: translateY(0) scale(0.97);
 }
-

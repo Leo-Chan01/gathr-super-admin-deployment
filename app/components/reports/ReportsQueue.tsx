@@ -39,25 +39,38 @@ export const ReportsQueue: React.FC = () => {
   const beginRemove = useReflow(gridRef);
   const search = useDebounced(query.trim());
 
-  const stats = useResource((signal) => getReportStats({ signal }).then(toReportMetrics), []);
+  const stats = useResource(
+    (signal) => getReportStats({ signal }).then(toReportMetrics),
+    [],
+  );
   const reports = useResource(
     (signal) =>
       listReports(
-        { page, limit: PAGE_SIZE, search: search || undefined, status: status === "all" ? undefined : status },
-        { signal }
-      ).then((result) => ({ items: result.items.map(toReportItem), meta: result.meta })),
-    [page, search, status]
+        {
+          page,
+          limit: PAGE_SIZE,
+          search: search || undefined,
+          status: status === "all" ? undefined : status,
+        },
+        { signal },
+      ).then((result) => ({
+        items: result.items.map(toReportItem),
+        meta: result.meta,
+      })),
+    [page, search, status],
   );
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
-      if (!filterRef.current?.contains(event.target as Node)) setMenuOpen(false);
+      if (!filterRef.current?.contains(event.target as Node))
+        setMenuOpen(false);
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  const activeFilter = filters.find((filter) => filter.value === status) ?? filters[0];
+  const activeFilter =
+    filters.find((filter) => filter.value === status) ?? filters[0];
   const items = reports.data?.items ?? [];
   const meta = reports.data?.meta;
 
@@ -68,12 +81,19 @@ export const ReportsQueue: React.FC = () => {
     reports.mutate((current) =>
       current
         ? {
-            meta: leaves ? { ...current.meta, totalItems: Math.max(0, current.meta.totalItems - 1) } : current.meta,
+            meta: leaves
+              ? {
+                  ...current.meta,
+                  totalItems: Math.max(0, current.meta.totalItems - 1),
+                }
+              : current.meta,
             items: leaves
               ? current.items.filter((item) => item.id !== id)
-              : current.items.map((item) => (item.id === id ? { ...item, status: next } : item)),
+              : current.items.map((item) =>
+                  item.id === id ? { ...item, status: next } : item,
+                ),
           }
-        : current
+        : current,
     );
     stats.reload();
   };
@@ -94,8 +114,13 @@ export const ReportsQueue: React.FC = () => {
 
   return (
     <>
-      {stats.error && <ErrorState message={stats.error} onRetry={stats.reload} compact />}
-      <MetricCards metrics={stats.data ?? toReportMetrics(undefined)} loading={stats.loading && !stats.data} />
+      {stats.error && (
+        <ErrorState message={stats.error} onRetry={stats.reload} compact />
+      )}
+      <MetricCards
+        metrics={stats.data ?? toReportMetrics(undefined)}
+        loading={stats.loading && !stats.data}
+      />
 
       <section className={styles.section}>
         <div className={styles.toolbar}>
@@ -126,7 +151,11 @@ export const ReportsQueue: React.FC = () => {
               <ChevronDown className={styles.filterIcon} />
             </button>
             {menuOpen && (
-              <ul className={styles.menu} role="listbox" aria-label="Report status">
+              <ul
+                className={styles.menu}
+                role="listbox"
+                aria-label="Report status"
+              >
                 {filters.map((filter) => (
                   <li key={filter.value}>
                     <button
@@ -156,9 +185,17 @@ export const ReportsQueue: React.FC = () => {
         ) : reports.loading && !reports.data ? (
           <SkeletonGrid count={6} className={styles.grid} height={200} />
         ) : items.length > 0 ? (
-          <div className={styles.grid} ref={gridRef} aria-busy={reports.loading}>
+          <div
+            className={styles.grid}
+            ref={gridRef}
+            aria-busy={reports.loading}
+          >
             {items.map((item) => (
-              <div key={item.id} data-flip-id={String(item.id)} className={styles.flipItem}>
+              <div
+                key={item.id}
+                data-flip-id={String(item.id)}
+                className={styles.flipItem}
+              >
                 <FlaggedCard
                   item={item}
                   busy={busyId === String(item.id)}
@@ -175,7 +212,8 @@ export const ReportsQueue: React.FC = () => {
         {meta && meta.totalPages > 1 && (
           <div className={styles.footer}>
             <span className={styles.showing}>
-              Page {meta.page} of {meta.totalPages} · {meta.totalItems.toLocaleString("en-US")} reports
+              Page {meta.page} of {meta.totalPages} ·{" "}
+              {meta.totalItems.toLocaleString("en-US")} reports
             </span>
             <div className={styles.pager}>
               <button
@@ -201,7 +239,11 @@ export const ReportsQueue: React.FC = () => {
         )}
       </section>
 
-      <ReportReviewDrawer reportId={reviewId} onClose={() => setReviewId(null)} onReviewed={applyReview} />
+      <ReportReviewDrawer
+        reportId={reviewId}
+        onClose={() => setReviewId(null)}
+        onReviewed={applyReview}
+      />
     </>
   );
 };

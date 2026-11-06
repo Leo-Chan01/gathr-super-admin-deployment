@@ -3,7 +3,13 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Camera, LogOut, User, X } from "lucide-react";
+import { ArrowLeft, Camera, LogOut, User, X } from "lucide-react";
+import { useAuth } from "@/app/context/AuthContext";
+import { str } from "@/app/lib/api/adapters";
+import { errorMessage } from "@/app/lib/api/client";
+import { updateMe, uploadImage } from "@/app/lib/api/profile";
+import { InlineSpinner } from "../common/AsyncState";
+import AccessControl, { type AccessView } from "./AccessControl";
 import styles from "./SettingsDialog.module.css";
 
 type SettingsTab = "general" | "access";
@@ -16,9 +22,36 @@ const CHANNELS = [
 const TYPES = [
   { id: "payouts", label: "Payout requests" },
   { id: "kyc", label: "KYC verification requests" },
-  { id: "reports", label: "Reports" },
-  { id: "reportsFollow", label: "Reports" },
+  { id: "reports", label: "New reports" },
+  { id: "reportsFollow", label: "Updates on reports I reviewed" },
 ] as const;
+
+/** There's no preferences endpoint yet, so toggles persist per browser. */
+const PREFS_KEY = "gathr.admin.notificationPrefs";
+
+type Prefs = { channels: Record<string, boolean>; types: Record<string, boolean> };
+
+const DEFAULT_PREFS: Prefs = {
+  channels: { sms: true, email: true },
+  types: { payouts: true, kyc: true, reports: true, reportsFollow: true },
+};
+
+const readPrefs = (): Prefs => {
+  try {
+    const raw = window.localStorage.getItem(PREFS_KEY);
+    return raw ? { ...DEFAULT_PREFS, ...(JSON.parse(raw) as Prefs) } : DEFAULT_PREFS;
+  } catch {
+    return DEFAULT_PREFS;
+  }
+};
+
+const writePrefs = (prefs: Prefs) => {
+  try {
+    window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    // Storage blocked; preferences last for this session only.
+  }
+};
 
 interface SettingsDialogProps {
   open: boolean;
@@ -30,34 +63,52 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   onClose,
 }) => {
   const router = useRouter();
+  const { session, logout } = useAuth();
+  const user = session?.user ?? null;
   const titleId = useId();
-  const emailRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
   const [rendered, setRendered] = useState(open);
   const [tab, setTab] = useState<SettingsTab>("general");
-  const [email, setEmail] = useState("sylvesterjo819@gmail.com");
-  const [draftEmail, setDraftEmail] = useState(email);
-  const [editingEmail, setEditingEmail] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [channels, setChannels] = useState<Record<string, boolean>>({
-    sms: true,
-    email: true,
-  });
-  const [types, setTypes] = useState<Record<string, boolean>>({
-    payouts: true,
-    kyc: true,
-    reports: true,
-    reportsFollow: true,
-  });
+  const [accessView, setAccessView] = useState<AccessView>("roles");
+  /** Direction of the last in-panel move, for the slide animation. */
+  const [motion, setMotion] = useState<"tab" | "forward" | "back">("tab");
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
+  const [draftName, setDraftName] = useState(fullName);
+  const [editingName, setEditingName] = useState(false);
+  const [savingName, setSavingName] = useState(false);
+  /** Local preview while an upload is in flight. */
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const channels = prefs.channels;
+  const types = prefs.types;
+  const avatarUrl = preview ?? str(user, "avatar", "avatar.url");
 
   if (open && !rendered) setRendered(true);
+  if (rendered && !prefsLoaded && typeof window !== "undefined") {
+    setPrefsLoaded(true);
+    setPrefs(readPrefs());
+  }
+
+  const updatePrefs = (update: (current: Prefs) => Prefs) =>
+    setPrefs((current) => {
+      const next = update(current);
+      writePrefs(next);
+      return next;
+    });
 
   useEffect(() => {
     if (open || !rendered) return;
     const timer = window.setTimeout(() => {
       setRendered(false);
       setTab("general");
-      setEditingEmail(false);
+      setAccessView("roles");
+      setMotion("tab");
+      setEditingName(false);
+      setProfileError(null);
     }, 240);
     return () => window.clearTimeout(timer);
   }, [open, rendered]);
@@ -72,30 +123,64 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   }, [rendered, onClose]);
 
   useEffect(() => {
-    if (!editingEmail) return;
-    emailRef.current?.focus();
-    emailRef.current?.select();
-  }, [editingEmail]);
+    if (!editingName) return;
+    nameRef.current?.focus();
+    nameRef.current?.select();
+  }, [editingName]);
+
+  // Release the blob preview once it's replaced or the dialog unmounts.
+  useEffect(() => {
+    if (!preview) return;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
 
   if (!rendered || typeof document === "undefined") return null;
 
   const closing = !open;
 
-  const saveEmail = () => {
-    const next = draftEmail.trim();
-    if (next) setEmail(next);
-    else setDraftEmail(email);
-    setEditingEmail(false);
+  const saveName = async () => {
+    const next = draftName.trim().replace(/\s+/g, " ");
+    setEditingName(false);
+    if (!next || next === fullName) {
+      setDraftName(fullName);
+      return;
+    }
+    const [firstName, ...rest] = next.split(" ");
+    setSavingName(true);
+    setProfileError(null);
+    try {
+      await updateMe({ firstName, lastName: rest.join(" ") });
+    } catch (err) {
+      setProfileError(errorMessage(err));
+      setDraftName(fullName);
+    } finally {
+      setSavingName(false);
+    }
   };
 
-  const onPhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const onPhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setPhoto((current) => {
-      if (current) URL.revokeObjectURL(current);
-      return url;
-    });
+    event.target.value = "";
+    if (!file || uploading) return;
+    setProfileError(null);
+    setPreview(URL.createObjectURL(file));
+    setUploading(true);
+    try {
+      const url = await uploadImage(file);
+      await updateMe({ avatar: url });
+      setPreview(null);
+    } catch (err) {
+      setPreview(null);
+      setProfileError(errorMessage(err));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    onClose();
+    await logout();
+    router.replace("/login");
   };
 
   return createPortal(
@@ -124,7 +209,11 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             <button
               type="button"
               className={`${styles.navItem} ${tab === "general" ? styles.navItemActive : ""}`}
-              onClick={() => setTab("general")}
+              onClick={() => {
+                setTab("general");
+                setAccessView("roles");
+                setMotion("tab");
+              }}
               aria-current={tab === "general" ? "page" : undefined}
             >
               General
@@ -132,7 +221,12 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             <button
               type="button"
               className={`${styles.navItem} ${tab === "access" ? styles.navItemActive : ""}`}
-              onClick={() => setTab("access")}
+              onClick={() => {
+                if (tab === "access" && accessView === "roles") return;
+                setTab("access");
+                setAccessView("roles");
+                setMotion("tab");
+              }}
               aria-current={tab === "access" ? "page" : undefined}
             >
               Access control
@@ -141,35 +235,61 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           <button
             type="button"
             className={styles.logout}
-            onClick={() => router.push("/login")}
+            onClick={handleLogout}
           >
             <LogOut className={styles.logoutIcon} />
             Log out
           </button>
         </aside>
 
-        <div key={tab} className={styles.panel}>
+        <div
+          key={`${tab}-${accessView}`}
+          className={`${styles.panel} ${tab === "access" ? styles.panelColumn : ""} ${
+            motion === "forward" ? styles.panelForward : motion === "back" ? styles.panelBack : ""
+          }`}
+        >
           <h2 id={titleId} className={styles.heading}>
-            {tab === "general" ? "General" : "Access control"}
+            {tab === "general" ? (
+              "General"
+            ) : accessView === "new" ? (
+              <button
+                type="button"
+                className={styles.backButton}
+                onClick={() => {
+                  setMotion("back");
+                  setAccessView("roles");
+                }}
+              >
+                <ArrowLeft className={styles.backIcon} aria-hidden="true" />
+                New admin
+              </button>
+            ) : (
+              "Roles & Permissions"
+            )}
           </h2>
 
           {tab === "general" ? (
             <>
               <div className={styles.profile}>
                 <div className={styles.avatarWrap}>
-                  <div className={styles.avatar}>
-                    {photo ? (
-                      // Blob previews are local and temporary.
+                  <div className={styles.avatar} aria-busy={uploading}>
+                    {avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={photo} alt="" className={styles.avatarPhoto} />
+                      <img src={avatarUrl} alt="" className={styles.avatarPhoto} />
                     ) : (
                       <User className={styles.avatarIcon} strokeWidth={1.75} />
+                    )}
+                    {uploading && (
+                      <span className={styles.avatarBusy}>
+                        <InlineSpinner />
+                      </span>
                     )}
                   </div>
                   <button
                     type="button"
                     className={styles.camera}
-                    aria-label="Update photo"
+                    aria-label="Change profile photo"
+                    disabled={uploading}
                     onClick={() => photoRef.current?.click()}
                   >
                     <Camera className={styles.cameraIcon} strokeWidth={1.75} />
@@ -178,39 +298,62 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                     ref={photoRef}
                     className={styles.photoInput}
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
                     onChange={onPhoto}
                   />
                 </div>
-                {editingEmail ? (
+                {editingName ? (
                   <input
-                    ref={emailRef}
+                    ref={nameRef}
                     className={styles.emailInput}
-                    value={draftEmail}
-                    aria-label="Email address"
-                    onChange={(event) => setDraftEmail(event.target.value)}
-                    onBlur={saveEmail}
+                    value={draftName}
+                    aria-label="Full name"
+                    placeholder="First and last name"
+                    onChange={(event) => setDraftName(event.target.value)}
+                    onBlur={saveName}
                     onKeyDown={(event) => {
-                      if (event.key === "Enter") saveEmail();
+                      if (event.key === "Enter") saveName();
+                      if (event.key === "Escape") {
+                        event.stopPropagation();
+                        setDraftName(fullName);
+                        setEditingName(false);
+                      }
                     }}
                   />
                 ) : (
-                  <p className={styles.email}>{email}</p>
+                  <p className={styles.name}>
+                    {savingName ? <InlineSpinner /> : null} {fullName || "Add your name"}
+                  </p>
                 )}
+                <p className={styles.email}>
+                  {user?.email ?? "No email on file"}
+                  {user?.email && (
+                    <span className={user.emailVerified ? styles.tagOk : styles.tagMissing}>
+                      {user.emailVerified ? "Verified" : "Unverified"}
+                    </span>
+                  )}
+                </p>
                 <button
                   type="button"
                   className={styles.updateEmail}
+                  disabled={savingName}
                   onClick={() => {
-                    setDraftEmail(email);
-                    setEditingEmail(true);
+                    setDraftName(fullName);
+                    setEditingName(true);
                   }}
                 >
-                  Update email
+                  Edit name
                 </button>
+                {profileError && (
+                  <p className={styles.error} role="alert">
+                    {profileError}
+                  </p>
+                )}
               </div>
 
               <section className={styles.group}>
                 <h3 className={styles.groupTitle}>Notification channel</h3>
+                <p className={styles.hint}>Saved on this device.</p>
                 {CHANNELS.map((item) => (
                   <div key={item.id} className={styles.row}>
                     <span>{item.label}</span>
@@ -221,9 +364,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                       aria-checked={channels[item.id]}
                       aria-label={item.label}
                       onClick={() =>
-                        setChannels((current) => ({
+                        updatePrefs((current) => ({
                           ...current,
-                          [item.id]: !current[item.id],
+                          channels: { ...current.channels, [item.id]: !current.channels[item.id] },
                         }))
                       }
                     >
@@ -245,9 +388,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                       aria-checked={types[item.id]}
                       aria-label={item.label}
                       onClick={() =>
-                        setTypes((current) => ({
+                        updatePrefs((current) => ({
                           ...current,
-                          [item.id]: !current[item.id],
+                          types: { ...current.types, [item.id]: !current.types[item.id] },
                         }))
                       }
                     >
@@ -257,7 +400,19 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                 ))}
               </section>
             </>
-          ) : null}
+          ) : (
+            <AccessControl
+              view={accessView}
+              onNewAdmin={() => {
+                setMotion("forward");
+                setAccessView("new");
+              }}
+              onDone={() => {
+                setMotion("back");
+                setAccessView("roles");
+              }}
+            />
+          )}
         </div>
       </div>
     </div>,

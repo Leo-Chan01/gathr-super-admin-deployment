@@ -35,6 +35,27 @@
   line-height: 1;
 }
 
+.valueSkeleton {
+  display: block;
+  width: 72px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.08);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .valueSkeleton {
+    animation: none;
+  }
+}
+
 .trend {
   display: flex;
   align-items: center;

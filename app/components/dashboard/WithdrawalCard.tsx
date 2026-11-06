@@ -16,7 +16,8 @@ export interface WithdrawalItem {
   accountLast4: string;
   walletType: string;
   campaignName: string;
-  thumbnailUrl: string;
+  thumbnailUrl?: string;
+  status?: string;
 }
 
 interface WithdrawalCardProps {
@@ -75,13 +76,19 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({
       {/* Bottom Action Row */}
       <div className={styles.actionRow}>
         <div className={styles.thumbnailContainer}>
-          <Image
-            src={item.thumbnailUrl}
-            alt={item.campaignName}
-            width={48}
-            height={48}
-            className={styles.thumbnailImage}
-          />
+          {item.thumbnailUrl ? (
+            <Image
+              src={item.thumbnailUrl}
+              alt={item.campaignName}
+              width={48}
+              height={48}
+              className={styles.thumbnailImage}
+            />
+          ) : (
+            <span className={styles.thumbnailPlaceholder} aria-hidden="true">
+              <Banknote />
+            </span>
+          )}
         </div>
 
         <button type="button" onClick={onView} className={styles.viewButton}>

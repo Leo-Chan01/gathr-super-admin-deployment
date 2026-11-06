@@ -1903,3 +1903,99 @@
     animation: none;
   }
 }
+
+/* ---- Live API wiring ---- */
+.postTitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.postBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff1f0;
+  color: #fd5e53;
+}
+
+.postBadgeMuted {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.postMeta {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.postSkeleton {
+  min-height: 320px;
+  background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 50%, #f8fafc 100%);
+  background-size: 200% 100%;
+  animation: feedShimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes feedShimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.loadMore {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: center;
+  margin: 8px auto 24px;
+  padding: 10px 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+}
+
+.loadMore:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.replyLoading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.menuItemDanger {
+  color: #e11d48 !important;
+}
+
+.broadcastNote {
+  flex: 1;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .postSkeleton {
+    animation: none;
+  }
+}

@@ -161,6 +161,21 @@
   flex-shrink: 0;
 }
 
+.thumbnailPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #f4f4f5;
+  color: #a1a1aa;
+}
+
+.thumbnailPlaceholder svg {
+  width: 20px;
+  height: 20px;
+}
+
 .thumbnailImage {
   width: 100%;
   height: 100%;

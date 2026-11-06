@@ -1,40 +1,40 @@
+// View models for the live feed. Data comes from app/lib/api/feed.ts;
+// the profile types/mocks below are only used by ProfileDrawer.
+
 export type FeedTab = 'impact' | 'gathr' | 'communities' | 'events'
-export type GathrFilter = 'all' | 'updates' | 'campaigns'
+/** Maps to the gathr `postType` filter. */
+export type GathrFilter = 'all' | 'offers' | 'requests'
 export type BroadcastAudience = 'all' | FeedTab
 
 export interface FeedPost {
   id: string
   tab: FeedTab
+  /** Entity type for interactions (likes, comments). */
+  entityType: 'IMPACT_POST' | 'GATHR' | 'COMMUNITY' | 'EVENT'
+  /** Author / creator user ID — links to /users/[id]. */
+  userId: string
   gathrKind?: Exclude<GathrFilter, 'all'>
   username: string
   location: string
   verified: boolean
-  avatarUrl: string
+  avatarUrl?: string
+  title?: string
   caption: string
   images: string[]
   likes: number
   comments: number
   liked: boolean
-}
-
-export interface AttentionItem {
-  id: string
-  label: string
-  href: string
-  tone: 'alert' | 'people' | 'payout'
-}
-
-export interface ActivityItem {
-  id: string
-  time: string
-  actor: string
-  detail: string
+  /** One-line summary under the caption (progress, members, date…). */
+  meta?: string
+  status?: string
+  featured?: boolean
 }
 
 export interface FeedReply {
   id: string
+  userId?: string
   username: string
-  avatarUrl: string
+  avatarUrl?: string
   time: string
   body: string
   likes: number
@@ -44,319 +44,10 @@ export interface FeedReply {
   replies?: FeedReply[]
 }
 
-export interface FeedComment {
-  id: string
+export interface FeedComment extends FeedReply {
   postId: string
-  username: string
-  avatarUrl: string
-  time: string
-  body: string
-  likes: number
-  liked: boolean
-  /** Shown in the comment pill; defaults to nested reply count */
-  replyCount?: number
   replies: FeedReply[]
 }
-
-export const feedPosts: FeedPost[] = [
-  {
-    id: 'impact-1',
-    tab: 'impact',
-    username: '@joshua_l',
-    location: 'Tokyo, Japan',
-    verified: true,
-    avatarUrl:
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
-    caption: 'Great updates on the school roofing project in Dansal',
-    images: [
-      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=1200&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1480074568708-e7b720bb3f09?w=1200&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1449844908441-8829872d2607?w=1200&auto=format&fit=crop&q=80'
-    ],
-    likes: 40200,
-    comments: 600,
-    liked: true
-  },
-  {
-    id: 'impact-2',
-    tab: 'impact',
-    username: '@joshua_l',
-    location: 'Tokyo, Japan',
-    verified: true,
-    avatarUrl:
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
-    caption: 'Great updates on the school roofing project in Dansal',
-    images: [
-      'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1200&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=1200&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=1200&auto=format&fit=crop&q=80'
-    ],
-    likes: 40200,
-    comments: 600,
-    liked: true
-  },
-  {
-    id: 'gathr-1',
-    tab: 'gathr',
-    gathrKind: 'updates',
-    username: '@gathr_hq',
-    location: 'Lagos, Nigeria',
-    verified: true,
-    avatarUrl:
-      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=120&auto=format&fit=crop&q=80',
-    caption: 'Weekly Gathr update: 128 communities crossed their funding goal.',
-    images: [
-      'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=1200&auto=format&fit=crop&q=80'
-    ],
-    likes: 8600,
-    comments: 142,
-    liked: false
-  },
-  {
-    id: 'gathr-2',
-    tab: 'gathr',
-    gathrKind: 'campaigns',
-    username: '@amina_k',
-    location: 'Nairobi, Kenya',
-    verified: false,
-    avatarUrl:
-      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
-    caption: 'Campaign spotlight: clean water wells for three rural schools.',
-    images: [
-      'https://images.unsplash.com/photo-1541844053589-346841d0b34c?w=1200&auto=format&fit=crop&q=80'
-    ],
-    likes: 12400,
-    comments: 310,
-    liked: false
-  },
-  {
-    id: 'community-1',
-    tab: 'communities',
-    username: '@green_earth',
-    location: 'Accra, Ghana',
-    verified: true,
-    avatarUrl:
-      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&auto=format&fit=crop&q=80',
-    caption: 'Green Earth Initiative opened a new community garden this morning.',
-    images: [
-      'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1200&auto=format&fit=crop&q=80'
-    ],
-    likes: 5400,
-    comments: 88,
-    liked: false
-  },
-  {
-    id: 'event-1',
-    tab: 'events',
-    username: '@gathr_events',
-    location: 'Online',
-    verified: true,
-    avatarUrl:
-      'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=120&auto=format&fit=crop&q=80',
-    caption: 'Live fundraiser tonight at 7pm. Bring a neighbor, share a cause.',
-    images: [
-      'https://images.unsplash.com/photo-1511578314322-379afb476865?w=1200&auto=format&fit=crop&q=80'
-    ],
-    likes: 2100,
-    comments: 46,
-    liked: false
-  }
-]
-
-const verifiedAuthors = new Set(
-  feedPosts.filter((post) => post.verified).map((post) => post.username)
-)
-verifiedAuthors.add('@emily_s')
-
-export const isVerifiedAuthor = (username: string) => verifiedAuthors.has(username)
-
-export const attentionItems: AttentionItem[] = [
-  { id: 'reports', label: '12 new reports', href: '/reports', tone: 'alert' },
-  {
-    id: 'verification',
-    label: '5 accounts pending verification',
-    href: '/users',
-    tone: 'people'
-  },
-  {
-    id: 'payouts',
-    label: '78 New payout requests',
-    href: '/wallets',
-    tone: 'payout'
-  }
-]
-
-export const initialActivity: ActivityItem[] = [
-  {
-    id: 'a1',
-    time: '20 mins ago',
-    actor: 'Green Earth Initiative',
-    detail: 'joined as an active affiliate'
-  },
-  {
-    id: 'a2',
-    time: '24 mins ago',
-    actor: 'Yellorr Earth Initiative',
-    detail: 'created a new community'
-  },
-  {
-    id: 'a3',
-    time: '10 mins ago',
-    actor: 'Green Earth Initiative',
-    detail: 'joined as an active affiliate'
-  },
-  {
-    id: 'a4',
-    time: '1 hr ago',
-    actor: 'The Reachout org',
-    detail: 'submitted verification documents'
-  },
-  {
-    id: 'a5',
-    time: '2 hrs ago',
-    actor: 'Miya Das',
-    detail: 'published a new impact update'
-  }
-]
-
-const joshuaAvatar =
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80'
-const emilyAvatar =
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80'
-
-export const feedComments: FeedComment[] = [
-  {
-    id: 'c1',
-    postId: 'impact-1',
-    username: '@joshua_l',
-    avatarUrl: joshuaAvatar,
-    time: '2hrs ago',
-    body: 'Being a part of the educational initiatives in the Dansa village has been an incredibly fulfilling experience. The joy of teaching and sharing.',
-    likes: 40200,
-    liked: true,
-    replyCount: 600,
-    replies: [
-      {
-        id: 'c1-r1',
-        username: '@joshua_l',
-        avatarUrl: joshuaAvatar,
-        time: '2hrs ago',
-        body: 'Being a part of the educational initiatives in the Dansa village has been an incredibly fulfilling experience. The joy of teaching and sharing.',
-        likes: 40200,
-        liked: true,
-        replyCount: 600
-      },
-      {
-        id: 'c1-r2',
-        username: '@emily_s',
-        avatarUrl: emilyAvatar,
-        time: '1hr ago',
-        body: 'This is the part I keep coming back to. The classroom photos say it better than I can.',
-        likes: 860,
-        liked: false
-      }
-    ]
-  },
-  {
-    id: 'c3',
-    postId: 'impact-1',
-    username: '@emily_s',
-    avatarUrl: emilyAvatar,
-    time: '1hr ago',
-    body: "Just returned from a community clean-up event in the heart of the city. It's amazing to see everyone come together for a common cause.",
-    likes: 1280,
-    liked: false,
-    replies: [
-      {
-        id: 'c3-r1',
-        username: '@joshua_l',
-        avatarUrl: joshuaAvatar,
-        time: '48mins ago',
-        body: 'Save me a spot next time. Dansal could use a morning like that.',
-        likes: 120,
-        liked: false
-      }
-    ]
-  },
-  {
-    id: 'c4',
-    postId: 'impact-2',
-    username: '@emily_s',
-    avatarUrl: emilyAvatar,
-    time: '3hrs ago',
-    body: 'The produce drive photos are wonderful. Families in Dansal will feel this.',
-    likes: 860,
-    liked: false,
-    replies: [
-      {
-        id: 'c4-r1',
-        username: '@joshua_l',
-        avatarUrl: joshuaAvatar,
-        time: '2hrs ago',
-        body: 'The bananas went first. The sack of grain is already spoken for.',
-        likes: 64,
-        liked: true
-      }
-    ]
-  },
-  {
-    id: 'c5',
-    postId: 'gathr-1',
-    username: '@amina_k',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
-    time: '5hrs ago',
-    body: '128 communities is a milestone worth celebrating. Onward.',
-    likes: 420,
-    liked: false,
-    replies: []
-  },
-  {
-    id: 'c6',
-    postId: 'gathr-2',
-    username: '@green_earth',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&auto=format&fit=crop&q=80',
-    time: '1 day ago',
-    body: 'Clean water for three schools changes the whole term. Count us in.',
-    likes: 210,
-    liked: false,
-    replies: [
-      {
-        id: 'c6-r1',
-        username: '@amina_k',
-        avatarUrl:
-          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&auto=format&fit=crop&q=80',
-        time: '20hrs ago',
-        body: 'We can host the well briefing next week.',
-        likes: 18,
-        liked: false
-      }
-    ]
-  },
-  {
-    id: 'c7',
-    postId: 'community-1',
-    username: '@joshua_l',
-    avatarUrl: joshuaAvatar,
-    time: '6hrs ago',
-    body: 'A garden on day one. This community is going to feed itself.',
-    likes: 96,
-    liked: false,
-    replies: []
-  },
-  {
-    id: 'c8',
-    postId: 'event-1',
-    username: '@emily_s',
-    avatarUrl: emilyAvatar,
-    time: '4hrs ago',
-    body: 'Sharing this with my neighbors. See you at 7.',
-    likes: 54,
-    liked: false,
-    replies: []
-  }
-]
 
 export type ReviewRelation = 'Donated to' | 'Received from' | 'Attended'
 
@@ -389,6 +80,11 @@ export interface UserProfile {
   reviews: ProfileReview[]
 }
 
+// Sample profile data for ProfileDrawer only.
+const joshuaAvatar =
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80'
+const emilyAvatar =
+  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80'
 const coverUrl =
   'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=1400&auto=format&fit=crop&q=80'
 const fredrickAvatar =

@@ -585,3 +585,348 @@
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
   transform: translateY(-1px);
 }
+
+/* API wiring: free-text reason + disabled states */
+.otherReason {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 14px;
+  color: #1e293b;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.otherReason:focus {
+  outline: none;
+  border-color: #fd5e53;
+}
+
+.footerActions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+a.viewDocButton {
+  text-decoration: none;
+}
+
+/* ---- Business profile / individual KYC details ---- */
+.logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #f1f5f9;
+}
+
+.notice {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.notice strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.notice p {
+  margin: 0;
+}
+
+.noticeWarn {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.noticeInfo {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.noticeIcon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.detailSection {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+  padding: 16px 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+}
+
+.fact dt {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.fact dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  min-width: 0;
+}
+
+.factEmpty {
+  color: #cbd5e1;
+  font-weight: 400;
+}
+
+.factText {
+  overflow-wrap: anywhere;
+}
+
+.verifiedValue {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tagOk,
+.tagMissing {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.tagOk {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.tagMissing {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.copyButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #475569;
+  cursor: pointer;
+}
+
+.copyButton svg {
+  width: 13px;
+  height: 13px;
+}
+
+.copyButton:hover {
+  background: #e2e8f0;
+}
+
+.checklist {
+  list-style: none;
+  margin: 0;
+  padding: 6px 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+}
+
+.checkItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.checkItem + .checkItem {
+  border-top: 1px solid #f1f5f9;
+}
+
+.checkMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.checkMark svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5;
+}
+
+.checkOk {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.checkMissing {
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.checkText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.checkLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.checkHint {
+  font-size: 12.5px;
+  color: #64748b;
+  overflow-wrap: anywhere;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.affiliation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.affiliation > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.affiliation p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.documentBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.docPreview {
+  display: block;
+  width: 100%;
+  height: 180px;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #f8fafc;
+  cursor: zoom-in;
+}
+
+.docPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 200ms ease;
+}
+
+.docPreview:hover img {
+  transform: scale(1.02);
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 16px;
+  background: rgba(15, 23, 42, 0.85);
+  animation: fadeIn 150ms ease;
+  cursor: zoom-out;
+}
+
+.lightbox img {
+  max-width: 100%;
+  max-height: calc(100vh - 140px);
+  border-radius: 12px;
+  object-fit: contain;
+  cursor: default;
+}
+
+.lightboxCaption {
+  color: #e2e8f0;
+  font-size: 14px;
+}
+
+.lightboxClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+@media (max-width: 420px) {
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docPreview img {
+    transition: none;
+  }
+}

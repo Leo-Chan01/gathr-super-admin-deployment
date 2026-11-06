@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Check,
   ChevronDown,
@@ -16,23 +17,36 @@ import {
 import AvatarIllustration from '../dashboard/AvatarIllustration'
 import avatarStyles from '../dashboard/AvatarIllustration.module.css'
 import KYCDetailDrawer from '../dashboard/KYCDetailDrawer'
+import MetricCards from '../dashboard/MetricCards'
 import type { KYCItem } from '../dashboard/KYCCard'
+import { ErrorState, InlineSpinner, SkeletonRows } from '../common/AsyncState'
 import {
-  categoryLabel,
-  individualUsers,
-  organizationUsers,
-  pendingOrganizations,
+  approveKyc,
+  getUserStats,
+  listPendingKyc,
+  listUsers,
+  rejectKyc,
+  updateUserStatus
+} from '../../lib/api/admin'
+import RestrictUserDialog, { type Restriction } from './RestrictUserDialog'
+import {
+  accountStatus,
   toKycItem,
+  toUserMetrics,
+  toUserRow,
   type AccountStatus,
-  type IndividualUser,
-  type OrganizationUser,
-  type OrgCategory,
-  type PendingOrganization,
-  type UserFilter,
-  type UserTab
-} from './userData'
+  type UserRow
+} from '../../lib/api/adapters'
+import { errorMessage } from '../../lib/api/client'
+import type { PageMeta, UserStatus } from '../../lib/api/types'
+import { useDebounced, useResource } from '../../lib/hooks/useResource'
 import { useTabIndicator } from '../motion/useMotion'
 import styles from './UsersBoard.module.css'
+
+type UserTab = 'individuals' | 'organizations' | 'pending'
+type StatusFilter = 'all' | 'ACTIVE' | 'BANNED' | 'SUSPENDED'
+type CategoryFilter = 'all' | 'for-profit' | 'non-profit'
+type UserFilter = StatusFilter | CategoryFilter
 
 const tabOrder: UserTab[] = ['individuals', 'organizations', 'pending']
 
@@ -44,8 +58,9 @@ const tabs: { key: UserTab; label: string }[] = [
 
 const statusFilters: { value: UserFilter; label: string }[] = [
   { value: 'all', label: 'All' },
-  { value: 'active', label: 'Active' },
-  { value: 'blocked', label: 'Blocked' }
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'BANNED', label: 'Banned' },
+  { value: 'SUSPENDED', label: 'Suspended' }
 ]
 
 const categoryFilters: { value: UserFilter; label: string }[] = [
@@ -54,12 +69,32 @@ const categoryFilters: { value: UserFilter; label: string }[] = [
   { value: 'non-profit', label: 'Non-profit' }
 ]
 
-const pageSizeFor = (tab: UserTab) => (tab === 'individuals' ? 12 : 6)
+const categoryLabel: Record<'for-profit' | 'non-profit', string> = {
+  'for-profit': 'For-profit',
+  'non-profit': 'Non-profit'
+}
 
-const nextStatus = (blocked: boolean): AccountStatus => (blocked ? 'blocked' : 'active')
+
+const pageSizeFor = (tab: UserTab) => (tab === 'individuals' ? 12 : 10)
+
+const isTab = (value: string | null): value is UserTab => tabOrder.includes(value as UserTab)
+
+interface TableData {
+  tab: UserTab
+  rows: UserRow[]
+  meta: PageMeta
+}
+
+interface PendingData {
+  rows: KYCItem[]
+  meta: PageMeta
+}
 
 export const UsersBoard: React.FC = () => {
-  const [tab, setTab] = useState<UserTab>('individuals')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get('tab')
+  const [tab, setTab] = useState<UserTab>(isTab(initialTab) ? initialTab : 'individuals')
   const [direction, setDirection] = useState<1 | -1>(1)
   const { tabsRef, indicator } = useTabIndicator(tab)
   const [query, setQuery] = useState('')
@@ -67,13 +102,59 @@ export const UsersBoard: React.FC = () => {
   const [page, setPage] = useState(1)
   const [filterOpen, setFilterOpen] = useState(false)
   const [menuId, setMenuId] = useState<string | null>(null)
-  const [individuals, setIndividuals] = useState<IndividualUser[]>(individualUsers)
-  const [organizations, setOrganizations] = useState<OrganizationUser[]>(organizationUsers)
-  const [pending, setPending] = useState<PendingOrganization[]>(pendingOrganizations)
+  const [pendingToggle, setPendingToggle] = useState<string | null>(null)
+  const [decidingId, setDecidingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [selectedKyc, setSelectedKyc] = useState<KYCItem | null>(null)
+  const [restricting, setRestricting] = useState<UserRow | null>(null)
+  const search = useDebounced(query.trim())
 
   const filterOptions = tab === 'pending' ? categoryFilters : statusFilters
   const activeFilter = filterOptions.find((option) => option.value === filter) ?? filterOptions[0]
+  const pageSize = pageSizeFor(tab)
+
+  const stats = useResource((signal) => getUserStats({ signal }).then(toUserMetrics), [])
+
+  // Individuals + organizations: server-side search, status filter and paging.
+  const users = useResource<TableData | null>(
+    async (signal) => {
+      if (tab === 'pending') return null
+      const result = await listUsers(
+        {
+          page,
+          limit: pageSize,
+          category: tab === 'individuals' ? 'INDIVIDUAL' : 'ORGANIZATION',
+          status: filter === 'all' ? undefined : (filter as UserStatus),
+          search: search || undefined
+        },
+        { signal }
+      )
+      return { tab, rows: result.items.map(toUserRow), meta: result.meta }
+    },
+    [tab, page, filter, search, pageSize]
+  )
+
+  // Pending verification: the KYC queue has no search/category params, so
+  // those filters apply to the loaded page only.
+  const pending = useResource<PendingData | null>(
+    async (signal) => {
+      if (tab !== 'pending') return null
+      const result = await listPendingKyc({ page, limit: pageSize }, { signal })
+      return { rows: result.items.map(toKycItem), meta: result.meta }
+    },
+    [tab, page, pageSize]
+  )
+
+  const pendingRows = useMemo(() => {
+    const rows = pending.data?.rows ?? []
+    const normalized = search.toLowerCase()
+    return rows.filter((row) => {
+      if (filter === 'for-profit' && row.category !== 'For-profit') return false
+      if (filter === 'non-profit' && row.category !== 'Non-profit') return false
+      if (!normalized) return true
+      return `${row.name} ${row.email ?? ''}`.toLowerCase().includes(normalized)
+    })
+  }, [pending.data, filter, search])
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
@@ -86,49 +167,15 @@ export const UsersBoard: React.FC = () => {
     return () => document.removeEventListener('mousedown', close)
   }, [])
 
-  const filteredIndividuals = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-    return individuals.filter((user) => {
-      const matchesFilter = filter === 'all' || filter === user.status
-      if (!matchesFilter) return false
-      if (!normalized) return true
-      return `${user.userNo} ${user.name} ${user.phone} ${user.email}`.toLowerCase().includes(normalized)
-    })
-  }, [individuals, query, filter])
-
-  const filteredOrganizations = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-    return organizations.filter((org) => {
-      const matchesFilter =
-        filter === 'all' || filter === org.status || filter === org.category
-      if (!matchesFilter) return false
-      if (!normalized) return true
-      return `${org.name} ${org.email} ${categoryLabel[org.category]}`.toLowerCase().includes(normalized)
-    })
-  }, [organizations, query, filter])
-
-  const filteredPending = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-    return pending.filter((org) => {
-      const matchesFilter = filter === 'all' || filter === org.category
-      if (!matchesFilter) return false
-      if (!normalized) return true
-      return `${org.name} ${org.email} ${categoryLabel[org.category]}`.toLowerCase().includes(normalized)
-    })
-  }, [pending, query, filter])
-
-  const activeRows =
-    tab === 'individuals'
-      ? filteredIndividuals
-      : tab === 'organizations'
-        ? filteredOrganizations
-        : filteredPending
-
-  const pageSize = pageSizeFor(tab)
-  const totalPages = Math.max(1, Math.ceil(activeRows.length / pageSize))
+  const active = tab === 'pending' ? pending : users
+  const meta = active.data?.meta
+  const totalPages = meta?.totalPages ?? 1
+  const visibleCount = tab === 'pending' ? pendingRows.length : users.data?.rows.length ?? 0
   const currentPage = Math.min(page, totalPages)
-  const start = (currentPage - 1) * pageSize
-  const visibleRows = activeRows.slice(start, start + pageSize)
+    // Show skeletons until data for *this* tab arrives (users resource is shared by two tabs).
+  const usersStale = tab !== 'pending' && users.data?.tab !== tab
+  const initialLoading = active.loading && (!active.data || usersStale)
+  const userRows = usersStale ? [] : users.data?.rows ?? []
 
   const changeTab = (next: UserTab) => {
     if (next === tab) return
@@ -139,229 +186,339 @@ export const UsersBoard: React.FC = () => {
     setPage(1)
     setFilterOpen(false)
     setMenuId(null)
+    setActionError(null)
+    router.replace(next === 'individuals' ? '/users' : `/users?tab=${next}`, { scroll: false })
   }
 
-  const toggleBlocked = (id: string, kind: 'individual' | 'organization') => {
-    if (kind === 'individual') {
-      setIndividuals((current) =>
-        current.map((user) => {
-          if (user.id !== id) return user
-          const blocked = !user.blocked
-          return { ...user, blocked, status: nextStatus(blocked) }
-        })
-      )
+  const patchRow = (id: string, patch: Partial<UserRow>) =>
+    users.mutate((current) =>
+      current ? { ...current, rows: current.rows.map((row) => (row.id === id ? { ...row, ...patch } : row)) } : current
+    )
+
+  const statusPatch = (status: UserStatus): Partial<UserRow> => {
+    const view = accountStatus(status)
+    return { rawStatus: status, status: view, blocked: view === 'blocked' || view === 'suspended' }
+  }
+
+  /** Toggle on → ask Ban or Suspend. Toggle off → reinstate immediately. */
+  const toggleBlocked = async (row: UserRow) => {
+    if (pendingToggle) return
+    if (!row.blocked) {
+      setRestricting(row)
       return
     }
+    const previous = { blocked: row.blocked, status: row.status, rawStatus: row.rawStatus }
+    setPendingToggle(row.id)
+    setActionError(null)
+    // Optimistic; roll back on failure.
+    patchRow(row.id, statusPatch('ACTIVE'))
+    try {
+      await updateUserStatus(row.id, 'ACTIVE')
+      stats.reload()
+    } catch (err) {
+      patchRow(row.id, previous)
+      setActionError(`Couldn't reinstate ${row.name}: ${errorMessage(err)}`)
+    } finally {
+      setPendingToggle(null)
+    }
+  }
 
-    setOrganizations((current) =>
-      current.map((org) => {
-        if (org.id !== id) return org
-        const blocked = !org.blocked
-        return { ...org, blocked, status: nextStatus(blocked) }
-      })
-    )
+  /** Called by the dialog; errors propagate so the dialog can show them. */
+  const restrict = async (status: Restriction) => {
+    if (!restricting) return
+    await updateUserStatus(restricting.id, status)
+    patchRow(restricting.id, statusPatch(status))
+    stats.reload()
   }
 
   const removePending = (id: string) => {
-    setPending((current) => current.filter((org) => org.id !== id))
-    setSelectedKyc(null)
+    pending.mutate((current) =>
+      current
+        ? {
+            rows: current.rows.filter((row) => String(row.id) !== id),
+            meta: { ...current.meta, totalItems: Math.max(0, current.meta.totalItems - 1) }
+          }
+        : current
+    )
+    stats.reload()
+  }
+
+  const decide = async (item: KYCItem, decision: 'approve' | 'reject', reason?: string) => {
+    const id = String(item.id)
+    if (decision === 'approve') await approveKyc(id)
+    else await rejectKyc(id, reason ?? 'Verification rejected')
+    removePending(id)
+  }
+
+  /** Inline Accept from the table row (Reject needs a reason, so it opens the drawer). */
+  const acceptInline = async (item: KYCItem) => {
+    const id = String(item.id)
+    setDecidingId(id)
+    setActionError(null)
+    try {
+      await decide(item, 'approve')
+    } catch (err) {
+      setActionError(`Couldn't approve ${item.name}: ${errorMessage(err)}`)
+    } finally {
+      setDecidingId(null)
+    }
   }
 
   const newLabel = tab === 'individuals' ? 'New user' : 'New org'
+  const rowOffset = (currentPage - 1) * pageSize
 
   return (
-    <section className={styles.board}>
-      <div className={styles.tabs} role="tablist" aria-label="User groups" ref={tabsRef}>
-        {indicator.ready && (
-          <span
-            className={styles.tabIndicator}
+    <>
+      {stats.error && <ErrorState message={stats.error} onRetry={stats.reload} compact />}
+      <MetricCards metrics={stats.data ?? toUserMetrics(undefined)} loading={stats.loading && !stats.data} />
+
+      <section className={styles.board}>
+        <div className={styles.tabs} role="tablist" aria-label="User groups" ref={tabsRef}>
+          {indicator.ready && (
+            <span
+              className={styles.tabIndicator}
               style={{
-              width: indicator.width,
-              transform: `translateX(${indicator.x}px)`
-            }}
-          />
-        )}
-        {tabs.map((item) => {
-          const isActive = tab === item.key
-          return (
-            <button
-              key={item.key}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              className={`${styles.tab} ${isActive ? styles.tabActive : ''}`}
-              onClick={() => changeTab(item.key)}
-            >
-              {item.label}
-            </button>
-          )
-        })}
-      </div>
-
-      <div className={styles.toolbar}>
-        <label className={styles.search}>
-          <span className={styles.srOnly}>Search</span>
-          <input
-            type="search"
-            value={query}
-            placeholder="Search"
-            className={styles.searchInput}
-            onChange={(event) => {
-              setQuery(event.target.value)
-              setPage(1)
-            }}
-          />
-          <Search className={styles.searchIcon} />
-        </label>
-
-        <div className={styles.toolbarActions}>
-          <div className={styles.filter} data-menu-root>
-            <button
-              type="button"
-              className={styles.filterButton}
-              aria-haspopup="listbox"
-              aria-expanded={filterOpen}
-              onClick={() => {
-                setFilterOpen((open) => !open)
-                setMenuId(null)
+                width: indicator.width,
+                transform: `translateX(${indicator.x}px)`
               }}
-            >
-              <span>{activeFilter.label}</span>
-              <ChevronDown className={styles.filterIcon} />
-            </button>
-            {filterOpen && (
-              <ul className={styles.menu} role="listbox" aria-label="Filter users">
-                {filterOptions.map((option) => (
-                  <li key={option.value}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={option.value === filter}
-                      className={`${styles.menuItem} ${
-                        option.value === filter ? styles.menuItemActive : ''
-                      }`}
-                      onClick={() => {
-                        setFilter(option.value)
-                        setPage(1)
-                        setFilterOpen(false)
-                      }}
-                    >
-                      {option.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+            />
+          )}
+          {tabs.map((item) => {
+            const isActive = tab === item.key
+            return (
+              <button
+                key={item.key}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`${styles.tab} ${isActive ? styles.tabActive : ''}`}
+                onClick={() => changeTab(item.key)}
+              >
+                {item.label}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className={styles.toolbar}>
+          <label className={styles.search}>
+            <span className={styles.srOnly}>Search</span>
+            <input
+              type="search"
+              value={query}
+              placeholder="Search"
+              className={styles.searchInput}
+              onChange={(event) => {
+                setQuery(event.target.value)
+                setPage(1)
+              }}
+            />
+            <Search className={styles.searchIcon} />
+          </label>
+
+          <div className={styles.toolbarActions}>
+            <div className={styles.filter} data-menu-root>
+              <button
+                type="button"
+                className={styles.filterButton}
+                aria-haspopup="listbox"
+                aria-expanded={filterOpen}
+                onClick={() => {
+                  setFilterOpen((open) => !open)
+                  setMenuId(null)
+                }}
+              >
+                <span>{activeFilter.label}</span>
+                <ChevronDown className={styles.filterIcon} />
+              </button>
+              {filterOpen && (
+                <ul className={styles.menu} role="listbox" aria-label="Filter users">
+                  {filterOptions.map((option) => (
+                    <li key={option.value}>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={option.value === filter}
+                        className={`${styles.menuItem} ${
+                          option.value === filter ? styles.menuItemActive : ''
+                        }`}
+                        onClick={() => {
+                          setFilter(option.value)
+                          setPage(1)
+                          setFilterOpen(false)
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {tab !== 'pending' && (
+              <button type="button" className={styles.newButton}>
+                <Plus className={styles.plusIcon} />
+                {newLabel}
+              </button>
             )}
           </div>
-
-          <button type="button" className={styles.newButton}>
-            <Plus className={styles.plusIcon} />
-            {newLabel}
-          </button>
         </div>
-      </div>
 
-      <div className={styles.tableWrap}>
-        <div key={tab} className={`${styles.pane} ${direction < 0 ? styles.paneBack : ''}`}>
-        {tab === 'individuals' && (
-          <IndividualsTable
-            rows={visibleRows as IndividualUser[]}
-            menuId={menuId}
-            onToggle={(id) => toggleBlocked(id, 'individual')}
-            onMenu={setMenuId}
-          />
-        )}
-        {tab === 'organizations' && (
-          <OrganizationsTable
-            rows={visibleRows as OrganizationUser[]}
-            rowOffset={start}
-            menuId={menuId}
-            onToggle={(id) => toggleBlocked(id, 'organization')}
-            onMenu={setMenuId}
-          />
-        )}
-        {tab === 'pending' && (
-          <PendingTable
-            rows={visibleRows as PendingOrganization[]}
-            rowOffset={start}
-            onView={(org) => setSelectedKyc(toKycItem(org))}
-            onAccept={(org) => removePending(org.id)}
-            onReject={(org) => removePending(org.id)}
-          />
-        )}
-        </div>
-      </div>
+        {actionError && <ErrorState message={actionError} compact />}
 
-      {activeRows.length > pageSize && (
-        <div className={styles.footer}>
-          <span className={styles.showing}>
-            Showing {visibleRows.length} of {activeRows.length} items
-          </span>
-          <div className={styles.pager}>
-            <button
-              type="button"
-              className={styles.pageArrow}
-              aria-label="Previous page"
-              disabled={currentPage === 1}
-              onClick={() => setPage(currentPage - 1)}
-            >
-              <ChevronLeft className={styles.pageIcon} />
-            </button>
-            {Array.from({ length: totalPages }, (_, index) => {
-              const pageNumber = index + 1
-              const isCurrent = pageNumber === currentPage
-              return (
-                <button
-                  key={pageNumber}
-                  type="button"
-                  className={`${styles.pageNumber} ${isCurrent ? styles.pageNumberActive : ''}`}
-                  aria-current={isCurrent ? 'page' : undefined}
-                  onClick={() => setPage(pageNumber)}
-                >
-                  {pageNumber}
-                </button>
-              )
-            })}
-            <button
-              type="button"
-              className={styles.pageArrow}
-              aria-label="Next page"
-              disabled={currentPage === totalPages}
-              onClick={() => setPage(currentPage + 1)}
-            >
-              <ChevronRight className={styles.pageIcon} />
-            </button>
+        <div className={styles.tableWrap}>
+          <div key={tab} className={`${styles.pane} ${direction < 0 ? styles.paneBack : ''}`}>
+            {active.error ? (
+              <ErrorState message={active.error} onRetry={active.reload} />
+            ) : (
+              <>
+                {tab === 'individuals' && (
+                  <IndividualsTable
+                    rows={userRows}
+                    loading={initialLoading}
+                    rowOffset={rowOffset}
+                    pageSize={pageSize}
+                    menuId={menuId}
+                    pendingToggle={pendingToggle}
+                    onToggle={toggleBlocked}
+                    onMenu={setMenuId}
+                  />
+                )}
+                {tab === 'organizations' && (
+                  <OrganizationsTable
+                    rows={userRows}
+                    loading={initialLoading}
+                    rowOffset={rowOffset}
+                    pageSize={pageSize}
+                    menuId={menuId}
+                    pendingToggle={pendingToggle}
+                    onToggle={toggleBlocked}
+                    onMenu={setMenuId}
+                  />
+                )}
+                {tab === 'pending' && (
+                  <PendingTable
+                    rows={pendingRows}
+                    loading={initialLoading}
+                    rowOffset={rowOffset}
+                    pageSize={pageSize}
+                    decidingId={decidingId}
+                    onView={setSelectedKyc}
+                    onAccept={acceptInline}
+                    onReject={setSelectedKyc}
+                  />
+                )}
+              </>
+            )}
           </div>
         </div>
-      )}
 
-      <KYCDetailDrawer
-        isOpen={Boolean(selectedKyc)}
-        item={selectedKyc}
-        onClose={() => setSelectedKyc(null)}
-        onAccept={(item) => removePending(String(item.id))}
-        onReject={(item) => removePending(String(item.id))}
-      />
-    </section>
+        {meta && meta.totalPages > 1 && (
+          <div className={styles.footer}>
+            <span className={styles.showing}>
+              Showing {visibleCount} of {meta.totalItems.toLocaleString('en-US')} items
+            </span>
+            <div className={styles.pager}>
+              <button
+                type="button"
+                className={styles.pageArrow}
+                aria-label="Previous page"
+                disabled={currentPage === 1 || active.loading}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                <ChevronLeft className={styles.pageIcon} />
+              </button>
+              {pageWindow(currentPage, totalPages).map((pageNumber, index) =>
+                pageNumber === null ? (
+                  <span key={`gap-${index}`} className={styles.pageNumber} aria-hidden="true">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={pageNumber}
+                    type="button"
+                    className={`${styles.pageNumber} ${pageNumber === currentPage ? styles.pageNumberActive : ''}`}
+                    aria-current={pageNumber === currentPage ? 'page' : undefined}
+                    disabled={active.loading}
+                    onClick={() => setPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </button>
+                )
+              )}
+              <button
+                type="button"
+                className={styles.pageArrow}
+                aria-label="Next page"
+                disabled={currentPage === totalPages || active.loading}
+                onClick={() => setPage(currentPage + 1)}
+              >
+                <ChevronRight className={styles.pageIcon} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        <RestrictUserDialog
+          userName={restricting?.name ?? null}
+          onClose={() => setRestricting(null)}
+          onConfirm={restrict}
+        />
+
+        <KYCDetailDrawer
+          isOpen={Boolean(selectedKyc)}
+          item={selectedKyc}
+          onClose={() => setSelectedKyc(null)}
+          onAccept={(item) => decide(item, 'approve')}
+          onReject={(item, reason) => decide(item, 'reject', reason)}
+        />
+      </section>
+    </>
   )
+}
+
+/** Page numbers with gaps, e.g. 1 … 4 5 6 … 20 */
+const pageWindow = (current: number, total: number): (number | null)[] => {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages = new Set([1, total, current - 1, current, current + 1])
+  const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b)
+  return sorted.flatMap((p, i) => (i > 0 && p - sorted[i - 1] > 1 ? [null, p] : [p]))
+}
+
+const statusLabel: Record<AccountStatus, string> = {
+  active: 'Active',
+  blocked: 'Blocked',
+  suspended: 'Suspended',
+  inactive: 'Inactive',
+  pending: 'Pending'
+}
+
+const dotClass: Record<AccountStatus, string> = {
+  active: styles.dotActive,
+  blocked: styles.dotBlocked,
+  suspended: styles.dotSuspended,
+  inactive: styles.dotInactive,
+  pending: styles.dotPending
 }
 
 const StatusBadge: React.FC<{ status: AccountStatus }> = ({ status }) => (
   <span className={styles.status}>
-    <span className={`${styles.statusDot} ${status === 'active' ? styles.dotActive : styles.dotBlocked}`} />
-    {status === 'active' ? 'Active' : 'Blocked'}
+    <span className={`${styles.statusDot} ${dotClass[status]}`} />
+    {statusLabel[status]}
   </span>
 )
 
-const CategoryBadge: React.FC<{ category: OrgCategory }> = ({ category }) => (
-  <span className={`${styles.category} ${category === 'for-profit' ? styles.forProfit : styles.nonProfit}`}>
-    {categoryLabel[category]}
+const CategoryBadge: React.FC<{ category: string }> = ({ category }) => (
+  <span className={`${styles.category} ${category === 'For-profit' ? styles.forProfit : styles.nonProfit}`}>
+    {category}
   </span>
 )
 
-const BlockToggle: React.FC<{ blocked: boolean; label: string; onToggle: () => void }> = ({
+const BlockToggle: React.FC<{ blocked: boolean; label: string; busy: boolean; onToggle: () => void }> = ({
   blocked,
   label,
+  busy,
   onToggle
 }) => (
   <button
@@ -369,7 +526,9 @@ const BlockToggle: React.FC<{ blocked: boolean; label: string; onToggle: () => v
     role="switch"
     aria-checked={blocked}
     aria-label={label}
-    className={`${styles.toggle} ${blocked ? styles.toggleOn : styles.toggleOff}`}
+    aria-busy={busy}
+    disabled={busy}
+    className={`${styles.toggle} ${blocked ? styles.toggleOn : styles.toggleOff} ${busy ? styles.toggleBusy : ''}`}
     onClick={onToggle}
   >
     <span className={styles.knob}>{blocked ? <Check className={styles.knobIcon} /> : <X className={styles.knobIcon} />}</span>
@@ -402,20 +561,35 @@ const RowMenu: React.FC<{ id: string; href: string; open: boolean; onToggle: () 
   </div>
 )
 
-const EmptyRow: React.FC<{ colSpan: number }> = ({ colSpan }) => (
+const EmptyRow: React.FC<{ colSpan: number; text?: string }> = ({ colSpan, text = 'No users match this view.' }) => (
   <tr>
     <td className={styles.empty} colSpan={colSpan}>
-      No users match this view.
+      {text}
     </td>
   </tr>
 )
 
-const IndividualsTable: React.FC<{
-  rows: IndividualUser[]
+interface UserTableProps {
+  rows: UserRow[]
+  loading: boolean
+  rowOffset: number
+  pageSize: number
   menuId: string | null
-  onToggle: (id: string) => void
+  pendingToggle: string | null
+  onToggle: (row: UserRow) => void
   onMenu: (id: string | null) => void
-}> = ({ rows, menuId, onToggle, onMenu }) => (
+}
+
+const IndividualsTable: React.FC<UserTableProps> = ({
+  rows,
+  loading,
+  rowOffset,
+  pageSize,
+  menuId,
+  pendingToggle,
+  onToggle,
+  onMenu
+}) => (
   <table className={`${styles.table} ${styles.individualsTable}`}>
     <thead>
       <tr>
@@ -430,10 +604,11 @@ const IndividualsTable: React.FC<{
       </tr>
     </thead>
     <tbody>
-      {rows.length === 0 && <EmptyRow colSpan={8} />}
-      {rows.map((user) => (
+      {loading && <SkeletonRows rows={pageSize} columns={8} />}
+      {!loading && rows.length === 0 && <EmptyRow colSpan={8} />}
+      {rows.map((user, index) => (
         <tr key={user.id}>
-          <td>{user.userNo}</td>
+          <td>{rowOffset + index + 1}</td>
           <td className={styles.strong}>{user.name}</td>
           <td>{user.phone}</td>
           <td>{user.email}</td>
@@ -444,8 +619,9 @@ const IndividualsTable: React.FC<{
           <td className={styles.centerCell}>
             <BlockToggle
               blocked={user.blocked}
-              label={`${user.blocked ? 'Unblock' : 'Block'} ${user.name}`}
-              onToggle={() => onToggle(user.id)}
+              busy={pendingToggle === user.id}
+              label={`${user.blocked ? 'Reinstate' : 'Ban or suspend'} ${user.name}`}
+              onToggle={() => onToggle(user)}
             />
           </td>
           <td className={styles.centerCell}>
@@ -462,13 +638,16 @@ const IndividualsTable: React.FC<{
   </table>
 )
 
-const OrganizationsTable: React.FC<{
-  rows: OrganizationUser[]
-  rowOffset: number
-  menuId: string | null
-  onToggle: (id: string) => void
-  onMenu: (id: string | null) => void
-}> = ({ rows, rowOffset, menuId, onToggle, onMenu }) => (
+const OrganizationsTable: React.FC<UserTableProps> = ({
+  rows,
+  loading,
+  rowOffset,
+  pageSize,
+  menuId,
+  pendingToggle,
+  onToggle,
+  onMenu
+}) => (
   <table className={`${styles.table} ${styles.organizationsTable}`}>
     <thead>
       <tr>
@@ -483,7 +662,8 @@ const OrganizationsTable: React.FC<{
       </tr>
     </thead>
     <tbody>
-      {rows.length === 0 && <EmptyRow colSpan={8} />}
+      {loading && <SkeletonRows rows={pageSize} columns={8} />}
+      {!loading && rows.length === 0 && <EmptyRow colSpan={8} />}
       {rows.map((org, index) => (
         <tr key={org.id}>
           <td>{rowOffset + index + 1}</td>
@@ -494,7 +674,7 @@ const OrganizationsTable: React.FC<{
             </span>
           </td>
           <td>
-            <CategoryBadge category={org.category} />
+            <CategoryBadge category={categoryLabel[org.category]} />
           </td>
           <td>{org.email}</td>
           <td>{org.joined}</td>
@@ -504,8 +684,9 @@ const OrganizationsTable: React.FC<{
           <td className={styles.centerCell}>
             <BlockToggle
               blocked={org.blocked}
-              label={`${org.blocked ? 'Unblock' : 'Block'} ${org.name}`}
-              onToggle={() => onToggle(org.id)}
+              busy={pendingToggle === org.id}
+              label={`${org.blocked ? 'Reinstate' : 'Ban or suspend'} ${org.name}`}
+              onToggle={() => onToggle(org)}
             />
           </td>
           <td className={styles.centerCell}>
@@ -523,12 +704,15 @@ const OrganizationsTable: React.FC<{
 )
 
 const PendingTable: React.FC<{
-  rows: PendingOrganization[]
+  rows: KYCItem[]
+  loading: boolean
   rowOffset: number
-  onView: (org: PendingOrganization) => void
-  onAccept: (org: PendingOrganization) => void
-  onReject: (org: PendingOrganization) => void
-}> = ({ rows, rowOffset, onView, onAccept, onReject }) => (
+  pageSize: number
+  decidingId: string | null
+  onView: (item: KYCItem) => void
+  onAccept: (item: KYCItem) => void
+  onReject: (item: KYCItem) => void
+}> = ({ rows, loading, rowOffset, pageSize, decidingId, onView, onAccept, onReject }) => (
   <table className={`${styles.table} ${styles.pendingTable}`}>
     <thead>
       <tr>
@@ -542,39 +726,58 @@ const PendingTable: React.FC<{
       </tr>
     </thead>
     <tbody>
-      {rows.length === 0 && <EmptyRow colSpan={7} />}
-      {rows.map((org, index) => (
-        <tr key={org.id}>
-          <td>{rowOffset + index + 1}</td>
-          <td>
-            <span className={styles.orgCell}>
-              <AvatarIllustration className={avatarStyles.compact} />
-              <span className={styles.strong}>{org.name}</span>
-            </span>
-          </td>
-          <td>
-            <CategoryBadge category={org.category} />
-          </td>
-          <td>{org.email}</td>
-          <td>{org.submitted}</td>
-          <td>
-            <button type="button" className={styles.viewButton} onClick={() => onView(org)}>
-              View
-              <ExternalLink className={styles.viewIcon} />
-            </button>
-          </td>
-          <td>
-            <span className={styles.decisionActions}>
-              <button type="button" className={styles.rejectButton} onClick={() => onReject(org)}>
-                Reject
+      {loading && <SkeletonRows rows={pageSize} columns={7} />}
+      {!loading && rows.length === 0 && <EmptyRow colSpan={7} text="No verifications waiting for review." />}
+      {rows.map((org, index) => {
+        const deciding = decidingId === String(org.id)
+        return (
+          <tr key={org.id}>
+            <td>{rowOffset + index + 1}</td>
+            <td>
+              <span className={styles.orgCell}>
+                <AvatarIllustration className={avatarStyles.compact} />
+                <span className={styles.strong}>{org.name}</span>
+              </span>
+            </td>
+            <td>
+              <CategoryBadge category={org.category} />
+            </td>
+            <td>{org.email ?? '—'}</td>
+            <td>{org.timeAgo || '—'}</td>
+            <td>
+              <button type="button" className={styles.viewButton} onClick={() => onView(org)}>
+                View ({org.docsSubmitted})
+                <ExternalLink className={styles.viewIcon} />
               </button>
-              <button type="button" className={styles.acceptButton} onClick={() => onAccept(org)}>
-                Accept
-              </button>
-            </span>
-          </td>
-        </tr>
-      ))}
+            </td>
+            <td>
+              <span className={styles.decisionActions}>
+                <button
+                  type="button"
+                  className={styles.rejectButton}
+                  onClick={() => onReject(org)}
+                  disabled={deciding}
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  className={styles.acceptButton}
+                  onClick={() => onAccept(org)}
+                  disabled={deciding || (org.details?.kind === 'organization' && !org.details.hasSubmission)}
+                  title={
+                    org.details?.kind === 'organization' && !org.details.hasSubmission
+                      ? 'Nothing has been submitted for review yet'
+                      : undefined
+                  }
+                >
+                  {deciding ? <InlineSpinner /> : 'Accept'}
+                </button>
+              </span>
+            </td>
+          </tr>
+        )
+      })}
     </tbody>
   </table>
 )

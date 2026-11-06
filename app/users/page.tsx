@@ -1,7 +1,5 @@
-import React from 'react'
-import MetricCards from '../components/dashboard/MetricCards'
+import React, { Suspense } from 'react'
 import UsersBoard from '../components/users/UsersBoard'
-import { userMetrics } from '../components/users/userData'
 import styles from './Users.module.css'
 
 const UsersPage = () => {
@@ -14,8 +12,10 @@ const UsersPage = () => {
         </p>
       </header>
 
-      <MetricCards metrics={userMetrics} />
-      <UsersBoard />
+      {/* UsersBoard reads ?tab= via useSearchParams, which needs a Suspense boundary. */}
+      <Suspense>
+        <UsersBoard />
+      </Suspense>
     </div>
   )
 }

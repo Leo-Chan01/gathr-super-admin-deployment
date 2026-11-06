@@ -14,14 +14,40 @@ export interface KYCDocument {
   url?: string
 }
 
+/** Everything the detail drawer shows; shape differs by account kind. */
+export interface KYCDetails {
+  kind: 'organization' | 'individual'
+  imageUrl?: string
+  fullName?: string
+  username?: string
+  email?: string
+  emailVerified: boolean
+  phone?: string
+  phoneVerified: boolean
+  signedUpAt: string
+  /** Organizations only: false when no business profile was submitted yet. */
+  hasSubmission: boolean
+  submittedAt?: string
+  location?: string
+  taxId?: string
+  foundedAt?: string
+  verificationStatus?: string
+  /** Reason from an earlier rejection — present on resubmissions. */
+  previousRejection?: string
+  affiliation?: { name: string; taxId?: string; orgId?: string }
+}
+
 export interface KYCItem {
+  /** User ID — the KYC approve/reject endpoints are keyed by user. */
   id: string | number
   name: string
+  email?: string
   category: string
   timeAgo: string
   docsSubmitted: number
   totalDocs: number
   documents?: KYCDocument[]
+  details?: KYCDetails
 }
 
 interface KYCCardProps {

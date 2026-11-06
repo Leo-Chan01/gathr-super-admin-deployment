@@ -356,3 +356,143 @@
     transition: none;
   }
 }
+
+/* ---- Real profile data ---- */
+.name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.name + .email {
+  margin-top: 4px;
+  font-weight: 500;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tagOk,
+.tagMissing {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.tagOk {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.tagMissing {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.avatar {
+  position: relative;
+}
+
+.avatarBusy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.6);
+  color: #fd5e53;
+}
+
+.camera:disabled,
+.updateEmail:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #d43d32;
+  text-align: center;
+}
+
+.hint {
+  margin: -4px 0 4px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* ---- Access control sub-views ---- */
+.panelColumn {
+  display: flex;
+  flex-direction: column;
+}
+
+.panelForward {
+  animation: slideFromRight 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.panelBack {
+  animation: slideFromLeft 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes slideFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes slideFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.backIcon {
+  width: 16px;
+  height: 16px;
+  transition: transform 150ms ease;
+}
+
+.backButton:hover .backIcon {
+  transform: translateX(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panelForward,
+  .panelBack {
+    animation: none;
+  }
+}

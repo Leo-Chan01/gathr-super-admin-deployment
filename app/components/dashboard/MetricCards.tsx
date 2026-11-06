@@ -7,45 +7,17 @@ import styles from './MetricCards.module.css'
 export interface MetricItem {
   title: string
   value: string
-  change: string
+  /** Omitted when the API doesn't return a period-over-period change. */
+  change?: string
   isPositive: boolean
   tone?: 'blue' | 'green' | 'gray' | 'pink'
 }
 
 interface MetricCardsProps {
   metrics?: MetricItem[]
+  /** Shows placeholder values while the first load is in flight. */
+  loading?: boolean
 }
-
-const defaultMetrics: MetricItem[] = [
-  {
-    title: 'Total Users',
-    value: '25k',
-    change: '+6.08%',
-    isPositive: true,
-    tone: 'blue'
-  },
-  {
-    title: 'Total Amount Raised',
-    value: '$3.2m',
-    change: '+6.08%',
-    isPositive: true,
-    tone: 'green'
-  },
-  {
-    title: 'Active Campaigns',
-    value: '102.1k',
-    change: '+6.08%',
-    isPositive: false,
-    tone: 'gray'
-  },
-  {
-    title: 'Reports',
-    value: '240',
-    change: '+6.08%',
-    isPositive: true,
-    tone: 'pink'
-  }
-]
 
 const toneClassName: Record<NonNullable<MetricItem['tone']>, string> = {
   blue: styles.toneBlue,
@@ -54,9 +26,9 @@ const toneClassName: Record<NonNullable<MetricItem['tone']>, string> = {
   pink: styles.tonePink
 }
 
-export const MetricCards: React.FC<MetricCardsProps> = ({ metrics = defaultMetrics }) => {
+export const MetricCards: React.FC<MetricCardsProps> = ({ metrics = [], loading = false }) => {
   return (
-    <div className={styles.grid}>
+    <div className={styles.grid} aria-busy={loading}>
       {metrics.map((metric) => {
         const isUp = metric.isPositive
         const toneClass = metric.tone ? toneClassName[metric.tone] : ''
@@ -65,19 +37,22 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ metrics = defaultMetri
             <span className={styles.title}>{metric.title}</span>
 
             <div className={styles.valueRow}>
-              <span className={styles.value}>{metric.value}</span>
+              {loading ? (
+                <span className={styles.valueSkeleton} aria-hidden="true" />
+              ) : (
+                <span className={styles.value}>{metric.value}</span>
+              )}
 
-              <div
-                className={`${styles.trend} ${isUp ? styles.trendUp : styles.trendDown
-                  }`}
-              >
-                <span>{metric.change}</span>
-                {isUp ? (
-                  <TrendingUp className={styles.trendIcon} />
-                ) : (
-                  <TrendingDown className={styles.trendIcon} />
-                )}
-              </div>
+              {!loading && metric.change && (
+                <div className={`${styles.trend} ${isUp ? styles.trendUp : styles.trendDown}`}>
+                  <span>{metric.change}</span>
+                  {isUp ? (
+                    <TrendingUp className={styles.trendIcon} />
+                  ) : (
+                    <TrendingDown className={styles.trendIcon} />
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )

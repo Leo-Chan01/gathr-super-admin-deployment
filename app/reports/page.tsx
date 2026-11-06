@@ -1,7 +1,5 @@
 import React from 'react'
-import MetricCards from '../components/dashboard/MetricCards'
 import ReportsQueue from '../components/reports/ReportsQueue'
-import { reportMetrics } from '../components/reports/reportData'
 import styles from './Reports.module.css'
 
 const ReportsPage = () => {
@@ -14,7 +12,6 @@ const ReportsPage = () => {
         </p>
       </header>
 
-      <MetricCards metrics={reportMetrics} />
       <ReportsQueue />
     </div>
   )

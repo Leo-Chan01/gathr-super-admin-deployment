@@ -149,3 +149,45 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.showing {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.pager {
+  display: flex;
+  gap: 8px;
+}
+
+.pageArrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+}
+
+.pageArrow svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pageArrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

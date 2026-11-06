@@ -1,7 +1,6 @@
 import React from 'react'
 import { Search } from 'lucide-react'
-import MetricCards from '../components/dashboard/MetricCards'
-import AttentionNeeded from '../components/dashboard/AttentionNeeded'
+import DashboardOverview from '../components/dashboard/DashboardOverview'
 import styles from './Dashboard.module.css'
 
 const DashboardPage = () => {
@@ -20,12 +19,7 @@ const DashboardPage = () => {
         </label>
       </header>
 
-      <MetricCards />
-
-      {/* Attention Needed Section */}
-      <div className="mt-2">
-        <AttentionNeeded />
-      </div>
+      <DashboardOverview />
     </div>
   )
 }

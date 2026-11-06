@@ -3,13 +3,13 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   AlertTriangle,
   Bookmark,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Check,
   Heart,
   MessageCircle,
   MoreHorizontal,
@@ -21,23 +21,32 @@ import {
   X
 } from 'lucide-react'
 import {
-  attentionItems,
-  feedComments,
-  feedPosts,
   formatCount,
-  getProfile,
-  initialActivity,
-  isVerifiedAuthor,
-  type ActivityItem,
   type BroadcastAudience,
   type FeedComment,
   type FeedReply,
   type FeedPost,
-  type UserProfile,
   type FeedTab,
   type GathrFilter
 } from './feedData'
-import ProfileDrawer from './ProfileDrawer'
+import AvatarIllustration from '../dashboard/AvatarIllustration'
+import { ErrorState, InlineSpinner } from '../common/AsyncState'
+import {
+  createComment,
+  deleteComment,
+  deleteImpactPost,
+  featureGathr,
+  listAuditLogs,
+  listComments,
+  listReplies,
+  setGathrStatus,
+  toggleLike as apiToggleLike
+} from '../../lib/api/feed'
+import { getDashboard } from '../../lib/api/admin'
+import { toDashboard } from '../../lib/api/adapters'
+import { errorMessage } from '../../lib/api/client'
+import { useDebounced, useResource } from '../../lib/hooks/useResource'
+import { useFeed } from './useFeed'
 import styles from './FeedBoard.module.css'
 
 const tabs: { key: FeedTab; label: string; menu?: boolean }[] = [
@@ -49,8 +58,8 @@ const tabs: { key: FeedTab; label: string; menu?: boolean }[] = [
 
 const gathrFilters: { value: GathrFilter; label: string }[] = [
   { value: 'all', label: 'All' },
-  { value: 'updates', label: 'Updates' },
-  { value: 'campaigns', label: 'Campaigns' }
+  { value: 'offers', label: 'Offers' },
+  { value: 'requests', label: 'Requests' }
 ]
 
 const audiences: { value: BroadcastAudience; label: string }[] = [
@@ -64,6 +73,17 @@ const audiences: { value: BroadcastAudience; label: string }[] = [
 type ImageSlide = { index: number; from: number; dir: 1 | -1 }
 
 const restingSlide: ImageSlide = { index: 0, from: 0, dir: 1 }
+
+/** Author avatar with an illustration fallback (many accounts have none). */
+const Avatar: React.FC<{ src?: string; size: number; className: string }> = ({ src, size, className }) =>
+  src ? (
+    <Image src={src} alt="" width={size} height={size} className={className} />
+  ) : (
+    <span className={className} style={{ width: size, height: size, display: 'inline-flex', overflow: 'hidden' }}>
+      <AvatarIllustration />
+    </span>
+  )
+
 
 const PostPhotos: React.FC<{
   images: string[]
@@ -117,37 +137,37 @@ interface PostDetailProps {
   onShowImage: (delta: number) => void
   onSelectImage: (index: number) => void
   onToggleMenu: () => void
-  onHide: () => void
+  postMenu: React.ReactNode
+  commentsState: { loading: boolean; error: string | null; reload: () => void }
+  posting: boolean
   onDraft: (value: string) => void
   onSubmit: () => void
   onSort: (value: 'latest' | 'oldest') => void
   onToggleSort: () => void
-  onCommentLike: (id: string) => void
   onCommentMenu: (id: string) => void
   onHideComment: (id: string) => void
   onAddReply: (parentId: string, text: string) => void
-  onOpenProfile: (username: string) => void
+  onExpandThread: (id: string) => void
+  onOpenProfile: (userId?: string) => void
   motion: 'enter' | 'forward' | 'back' | 'exit'
 }
 
 interface CommentNode {
   id: string
+  userId?: string
   username: string
-  avatarUrl: string
+  avatarUrl?: string
   time: string
   body: string
   likes: number
   liked: boolean
 }
 
-const youAvatar =
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80'
-
 const CommentStats: React.FC<{
   item: CommentNode
   replyCount: number
   replying?: boolean
-  onLike: () => void
+  onLike?: () => void
   onReply?: () => void
 }> = ({ item, replyCount, replying, onLike, onReply }) => (
     <div className={styles.commentStatsPill}>
@@ -155,6 +175,8 @@ const CommentStats: React.FC<{
         type="button"
         className={`${styles.commentStatsSegment} ${item.liked ? styles.commentStatsSegmentActive : ''}`}
         aria-pressed={item.liked}
+        aria-label={onLike ? undefined : `${item.likes} likes`}
+        disabled={!onLike}
         onClick={onLike}
       >
         <Heart className={`${styles.commentStatsIcon} ${item.liked ? styles.heartFilled : ''}`} />
@@ -174,6 +196,22 @@ const CommentStats: React.FC<{
     </div>
 )
 
+/** Removing a comment deletes it for everyone, so it takes a second click. */
+const RemoveCommentMenu: React.FC<{ onConfirm: () => void }> = ({ onConfirm }) => {
+  const [armed, setArmed] = useState(false)
+  return (
+    <div className={styles.rowMenuList}>
+      <button
+        type="button"
+        className={`${styles.menuItem} ${armed ? styles.menuItemDanger : ''}`}
+        onClick={() => (armed ? onConfirm() : setArmed(true))}
+      >
+        {armed ? 'Click again to remove' : 'Remove comment'}
+      </button>
+    </div>
+  )
+}
+
 const CommentRow: React.FC<{
   item: CommentNode
   variant: 'root' | 'reply'
@@ -186,8 +224,7 @@ const CommentRow: React.FC<{
   replying?: boolean
   onToggleReplies?: () => void
   onReply?: () => void
-  onOpenProfile: (username: string) => void
-  onCommentLike: (id: string) => void
+  onOpenProfile: (userId?: string) => void
   onCommentMenu: (id: string) => void
   onHideComment: (id: string) => void
 }> = ({
@@ -203,7 +240,6 @@ const CommentRow: React.FC<{
   onToggleReplies,
   onReply,
   onOpenProfile,
-  onCommentLike,
   onCommentMenu,
   onHideComment
 }) => (
@@ -227,18 +263,13 @@ const CommentRow: React.FC<{
           aria-hidden
         />
       )}
-      <Image src={item.avatarUrl} alt="" width={36} height={36} className={styles.commentAvatar} />
+      <Avatar src={item.avatarUrl} size={36} className={styles.commentAvatar} />
     </div>
     <div className={styles.commentBody}>
       <p className={styles.commentMeta}>
-        <button type="button" className={styles.commentUser} onClick={() => onOpenProfile(item.username)}>
+        <button type="button" className={styles.commentUser} onClick={() => onOpenProfile(item.userId)}>
           {item.username}
         </button>
-        {isVerifiedAuthor(item.username) && (
-          <span className={styles.commentVerified} aria-label="Verified">
-            <Check className={styles.commentVerifiedIcon} strokeWidth={3} />
-          </span>
-        )}
         <span>·</span>
         <span>{item.time}</span>
       </p>
@@ -259,7 +290,6 @@ const CommentRow: React.FC<{
           item={item}
           replyCount={replyCount}
           replying={replying}
-          onLike={() => onCommentLike(item.id)}
           onReply={onReply}
         />
         <div className={styles.rowMenu} data-menu-root>
@@ -272,13 +302,7 @@ const CommentRow: React.FC<{
           >
             <MoreHorizontal className={styles.moreIcon} />
           </button>
-          {menuId === item.id && (
-            <div className={styles.rowMenuList}>
-              <button type="button" className={styles.menuItem} onClick={() => onHideComment(item.id)}>
-                Hide comment
-              </button>
-            </div>
-          )}
+          {menuId === item.id && <RemoveCommentMenu onConfirm={() => onHideComment(item.id)} />}
         </div>
       </div>
     </div>
@@ -296,8 +320,7 @@ const CommentBranch: React.FC<{
   onStartReply: (id: string) => void
   onSubmitReply: (parentId: string, text: string) => void
   onCancelReply: () => void
-  onOpenProfile: (username: string) => void
-  onCommentLike: (id: string) => void
+  onOpenProfile: (userId?: string) => void
   onCommentMenu: (id: string) => void
   onHideComment: (id: string) => void
 }> = ({
@@ -312,7 +335,6 @@ const CommentBranch: React.FC<{
   onSubmitReply,
   onCancelReply,
   onOpenProfile,
-  onCommentLike,
   onCommentMenu,
   onHideComment
 }) => {
@@ -358,8 +380,8 @@ const CommentBranch: React.FC<{
         hookDelay={0}
         menuId={menuId}
         replyCount={pillReplyCount}
-        canToggleReplies={replies.length > 0}
-        repliesOpen={entered && replies.length > 0}
+        canToggleReplies={pillReplyCount > 0}
+        repliesOpen={entered && pillReplyCount > 0}
         replying={replying}
         onToggleReplies={() => onToggleThread(item.id)}
         onReply={() => {
@@ -367,7 +389,6 @@ const CommentBranch: React.FC<{
           if (replying && entered) replyInputRef.current?.focus()
         }}
         onOpenProfile={onOpenProfile}
-        onCommentLike={onCommentLike}
         onCommentMenu={onCommentMenu}
         onHideComment={onHideComment}
       />
@@ -377,6 +398,11 @@ const CommentBranch: React.FC<{
         aria-hidden={!entered}
       >
         <div className={styles.replyCollapseInner}>
+          {entered && pillReplyCount > 0 && replies.length === 0 && (
+            <p className={styles.replyLoading}>
+              <InlineSpinner /> Loading replies…
+            </p>
+          )}
           {replies.length > 0 && (
             <div className={styles.replyTree}>
               {replies.map((reply, replyIndex) => (
@@ -393,7 +419,6 @@ const CommentBranch: React.FC<{
                   onSubmitReply={onSubmitReply}
                   onCancelReply={onCancelReply}
                   onOpenProfile={onOpenProfile}
-                  onCommentLike={onCommentLike}
                   onCommentMenu={onCommentMenu}
                   onHideComment={onHideComment}
                 />
@@ -427,17 +452,19 @@ const CommentBranch: React.FC<{
 const CommentThread: React.FC<{
   comments: FeedComment[]
   menuId: string | null
-  onCommentLike: (id: string) => void
   onCommentMenu: (id: string) => void
   onHideComment: (id: string) => void
-  onOpenProfile: (username: string) => void
+  onOpenProfile: (userId?: string) => void
   onAddReply: (parentId: string, text: string) => void
-}> = ({ comments, menuId, onCommentLike, onCommentMenu, onHideComment, onOpenProfile, onAddReply }) => {
+  /** Called when a thread opens so its replies can be fetched. */
+  onExpand: (id: string) => void
+}> = ({ comments, menuId, onCommentMenu, onHideComment, onOpenProfile, onAddReply, onExpand }) => {
   const [openThreads, setOpenThreads] = useState<Record<string, boolean>>({})
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
 
   const toggleThread = (id: string) => {
     const closing = Boolean(openThreads[id])
+    if (!closing) onExpand(id)
     setOpenThreads((current) => ({ ...current, [id]: !current[id] }))
     if (closing) {
       setReplyingTo((current) => (current === id ? null : current))
@@ -465,13 +492,35 @@ const CommentThread: React.FC<{
             onSubmitReply={onAddReply}
             onCancelReply={() => setReplyingTo(null)}
             onOpenProfile={onOpenProfile}
-            onCommentLike={onCommentLike}
             onCommentMenu={onCommentMenu}
             onHideComment={onHideComment}
           />
         </li>
       ))}
     </ul>
+  )
+}
+
+const statusLabel = (status?: string) =>
+  status && status !== 'ACTIVE'
+    ? status.toLowerCase().replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+    : undefined
+
+/** Title (gathr/communities/events), caption, and the one-line summary. */
+const PostText: React.FC<{ post: FeedPost }> = ({ post }) => {
+  const status = statusLabel(post.status)
+  return (
+    <>
+      {(post.title || post.featured || status) && (
+        <p className={styles.postTitle}>
+          {post.title}
+          {post.featured && <span className={styles.postBadge}>Featured</span>}
+          {status && <span className={`${styles.postBadge} ${styles.postBadgeMuted}`}>{status}</span>}
+        </p>
+      )}
+      {post.caption && <p className={styles.caption}>{post.caption}</p>}
+      {post.meta && <p className={styles.postMeta}>{post.meta}</p>}
+    </>
   )
 }
 
@@ -492,15 +541,17 @@ const PostDetail: React.FC<PostDetailProps> = ({
   onShowImage,
   onSelectImage,
   onToggleMenu,
-  onHide,
+  postMenu,
+  commentsState,
+  posting,
   onDraft,
   onSubmit,
   onSort,
   onToggleSort,
-  onCommentLike,
   onCommentMenu,
   onHideComment,
   onAddReply,
+  onExpandThread,
   onOpenProfile,
   motion
 }) => (
@@ -519,9 +570,9 @@ const PostDetail: React.FC<PostDetailProps> = ({
         <button
           type="button"
           className={styles.identityButton}
-          onClick={() => onOpenProfile(post.username)}
+          onClick={() => onOpenProfile(post.userId)}
         >
-          <Image src={post.avatarUrl} alt="" width={40} height={40} className={styles.avatar} />
+          <Avatar src={post.avatarUrl} size={40} className={styles.avatar} />
           <div className={styles.identity}>
             <div className={styles.nameRow}>
               <span className={styles.username}>{post.username}</span>
@@ -540,18 +591,13 @@ const PostDetail: React.FC<PostDetailProps> = ({
           >
             <MoreHorizontal className={styles.moreIcon} />
           </button>
-          {menuOpen && (
-            <div className={styles.rowMenuList}>
-              <button type="button" className={styles.menuItem} onClick={onHide}>
-                Hide post
-              </button>
-            </div>
-          )}
+          {menuOpen && postMenu}
         </div>
       </div>
 
-      <p className={styles.caption}>{post.caption}</p>
+      <PostText post={post} />
 
+      {post.images.length > 0 && (
       <div className={styles.detailMedia}>
         <PostPhotos images={post.images} slide={imageSlide} sizes="420px" />
         {post.images.length > 1 && (
@@ -591,6 +637,7 @@ const PostDetail: React.FC<PostDetailProps> = ({
           </>
         )}
       </div>
+      )}
 
       <div className={styles.detailActions}>
         <button
@@ -635,8 +682,9 @@ const PostDetail: React.FC<PostDetailProps> = ({
       <input
         id="feed-composer"
         className={styles.composer}
-        placeholder="Join the conversation"
+        placeholder="Comment as Gathr admin"
         value={draft}
+        disabled={posting}
         onChange={(event) => onDraft(event.target.value)}
       />
     </form>
@@ -675,41 +723,69 @@ const PostDetail: React.FC<PostDetailProps> = ({
       )}
     </div>
 
-    <CommentThread
-      comments={comments}
-      menuId={menuId}
-      onCommentLike={onCommentLike}
-      onCommentMenu={onCommentMenu}
-      onHideComment={onHideComment}
-      onOpenProfile={onOpenProfile}
-      onAddReply={onAddReply}
-    />
+    {commentsState.error ? (
+      <ErrorState message={commentsState.error} onRetry={commentsState.reload} compact />
+    ) : commentsState.loading && comments.length === 0 ? (
+      <p className={styles.replyLoading}>
+        <InlineSpinner /> Loading comments…
+      </p>
+    ) : comments.length === 0 ? (
+      <p className={styles.empty}>No comments yet.</p>
+    ) : (
+      <CommentThread
+        comments={comments}
+        menuId={menuId}
+        onCommentMenu={onCommentMenu}
+        onHideComment={onHideComment}
+        onOpenProfile={onOpenProfile}
+        onAddReply={onAddReply}
+        onExpand={onExpandThread}
+      />
+    )}
   </div>
 )
 
 export const FeedBoard: React.FC = () => {
+  const router = useRouter()
   const [tab, setTab] = useState<FeedTab>('impact')
   const [gathrFilter, setGathrFilter] = useState<GathrFilter>('all')
   const [gathrOpen, setGathrOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [posts, setPosts] = useState<FeedPost[]>(feedPosts)
+  const search = useDebounced(query.trim())
+  const feed = useFeed(tab, gathrFilter, search)
+  const posts = feed.posts
+  const setPosts = feed.setPosts
   const [savedIds, setSavedIds] = useState<string[]>([])
   const [imageSlides, setImageSlides] = useState<Record<string, ImageSlide>>({})
   const [menuId, setMenuId] = useState<string | null>(null)
-  const [activity, setActivity] = useState<ActivityItem[]>(initialActivity)
   const [showAllActivity, setShowAllActivity] = useState(false)
   const [message, setMessage] = useState('')
   const [audience, setAudience] = useState<BroadcastAudience>('all')
   const [audienceOpen, setAudienceOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [profileUser, setProfileUser] = useState<string | null>(null)
-  const [comments, setComments] = useState<FeedComment[]>(feedComments)
   const [commentSort, setCommentSort] = useState<'latest' | 'oldest'>('latest')
   const [sortOpen, setSortOpen] = useState(false)
   const [draft, setDraft] = useState('')
+  const [posting, setPosting] = useState(false)
+  const [busyPost, setBusyPost] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [loadedReplies, setLoadedReplies] = useState<Record<string, true>>({})
   const railRef = useRef<HTMLElement>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
   const [tabIndicator, setTabIndicator] = useState({ x: 0, width: 0 })
+
+  const selectedPost = posts.find((post) => post.id === selectedId) ?? null
+
+  // Rail data
+  const dashboard = useResource((signal) => getDashboard({ signal }).then(toDashboard), [])
+  const audit = useResource((signal) => listAuditLogs(10, { signal }), [])
+  // Comments for the open post (re-fetched per post).
+  const commentsRes = useResource<FeedComment[]>(
+    (signal) => (selectedPost ? listComments(selectedPost, { signal }) : Promise.resolve([])),
+    [selectedId]
+  )
+  const comments = useMemo(() => commentsRes.data ?? [], [commentsRes.data])
 
   useEffect(() => {
     const rail = railRef.current
@@ -748,21 +824,16 @@ export const FeedBoard: React.FC = () => {
       observer.disconnect()
       window.removeEventListener('resize', update)
     }
-  }, [selectedId, profileUser])
+  }, [selectedId])
 
   useEffect(() => {
-    if (!selectedId && !profileUser) return
+    if (!selectedId) return
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      if (profileUser) {
-        setProfileUser(null)
-        return
-      }
-      setSelectedId(null)
+      if (event.key === 'Escape') setSelectedId(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selectedId, profileUser])
+  }, [selectedId])
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
@@ -770,6 +841,7 @@ export const FeedBoard: React.FC = () => {
       if (target.closest('[data-menu-root]')) return
       setGathrOpen(false)
       setMenuId(null)
+      setConfirmDelete(null)
       setAudienceOpen(false)
       setSortOpen(false)
     }
@@ -777,60 +849,46 @@ export const FeedBoard: React.FC = () => {
     return () => document.removeEventListener('mousedown', close)
   }, [])
 
-  const visiblePosts = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
-    return posts.filter((post) => {
-      if (post.tab !== tab) return false
-      if (tab === 'gathr' && gathrFilter !== 'all' && post.gathrKind !== gathrFilter) return false
-      if (!normalized) return true
-      return `${post.username} ${post.location} ${post.caption}`.toLowerCase().includes(normalized)
-    })
-  }, [posts, tab, gathrFilter, query])
-
+  const activity = audit.data ?? []
   const visibleActivity = showAllActivity ? activity : activity.slice(0, 3)
   const activeAudience = audiences.find((item) => item.value === audience) ?? audiences[0]
-  const selectedPost = posts.find((post) => post.id === selectedId) ?? null
-  const profile = useMemo(
-    () => (profileUser ? getProfile(profileUser) : null),
-    [profileUser]
+  const drawerOpen = Boolean(selectedPost)
+  const visibleComments = useMemo(
+    () => (commentSort === 'oldest' ? [...comments].reverse() : comments),
+    [comments, commentSort]
   )
-  const drawerOpen = Boolean(profile || selectedPost)
-  const visibleComments = useMemo(() => {
-    const list = comments.filter((comment) => comment.postId === selectedId)
-    return commentSort === 'oldest' ? [...list].reverse() : list
-  }, [comments, selectedId, commentSort])
 
-  const nextView = profile ? 'profile' : selectedPost ? 'post' : 'closed'
+  const counts = dashboard.data?.counts
+  const attentionItems = [
+    { id: 'flagged', label: `${counts?.flagged ?? '—'} flagged posts need review`, href: '/reports', tone: 'alert' as const },
+    { id: 'kyc', label: `${counts?.kyc ?? '—'} verifications pending`, href: '/users?tab=pending', tone: 'people' as const },
+    { id: 'withdrawals', label: `${counts?.withdrawals ?? '—'} withdrawal requests`, href: '/wallets', tone: 'payout' as const }
+  ]
+
+  const nextView = selectedPost ? 'post' : 'closed'
   const [trackedView, setTrackedView] = useState(nextView)
-  const [snapshot, setSnapshot] = useState<{
-    post: FeedPost | null
-    profile: UserProfile | null
-    comments: FeedComment[]
-  }>({ post: null, profile: null, comments: [] })
+  const [snapshot, setSnapshot] = useState<{ post: FeedPost | null; comments: FeedComment[] }>({
+    post: null,
+    comments: []
+  })
   const [mountedDrawer, setMountedDrawer] = useState(false)
   const [phase, setPhase] = useState<'in' | 'out'>('out')
-  const [swap, setSwap] = useState<'enter' | 'forward' | 'back'>('enter')
   const [shellArmed, setShellArmed] = useState(false)
 
   if (nextView !== trackedView) {
     setTrackedView(nextView)
     if (nextView !== 'closed') {
-      setSnapshot({ post: selectedPost, profile, comments: visibleComments })
+      setSnapshot({ post: selectedPost, comments: visibleComments })
       setMountedDrawer(true)
       setPhase('in')
-      if (trackedView === 'closed') setSwap('enter')
-      else if (trackedView === 'post' && nextView === 'profile') setSwap('forward')
-      else if (trackedView === 'profile' && nextView === 'post') setSwap('back')
     } else {
       setPhase('out')
     }
   } else if (
     nextView !== 'closed' &&
-    (snapshot.post !== selectedPost ||
-      snapshot.profile !== profile ||
-      snapshot.comments !== visibleComments)
+    (snapshot.post !== selectedPost || snapshot.comments !== visibleComments)
   ) {
-    setSnapshot({ post: selectedPost, profile, comments: visibleComments })
+    setSnapshot({ post: selectedPost, comments: visibleComments })
   }
 
   const wantShell = mountedDrawer && phase === 'in'
@@ -880,15 +938,18 @@ export const FeedBoard: React.FC = () => {
   }, [tab])
 
   const showingSnapshot = mountedDrawer && !drawerOpen
-  const panelMotion = showingSnapshot || phase === 'out' ? 'exit' : swap
+  const panelMotion = showingSnapshot || phase === 'out' ? 'exit' : 'enter'
   const panelPost = showingSnapshot ? snapshot.post : selectedPost
-  const panelProfile = showingSnapshot ? snapshot.profile : profile
   const panelComments = showingSnapshot ? snapshot.comments : visibleComments
+
+  const patchPost = (id: string, patch: Partial<FeedPost>) =>
+    setPosts((current) => current.map((post) => (post.id === id ? { ...post, ...patch } : post)))
 
   const selectTab = (next: FeedTab) => {
     setTab(next)
     setMenuId(null)
     setAudienceOpen(false)
+    setSelectedId(null)
     if (next === 'gathr') {
       setGathrOpen((open) => (tab === 'gathr' ? !open : true))
       return
@@ -896,14 +957,20 @@ export const FeedBoard: React.FC = () => {
     setGathrOpen(false)
   }
 
-  const toggleLike = (id: string) => {
-    setPosts((current) =>
-      current.map((post) => {
-        if (post.id !== id) return post
-        const liked = !post.liked
-        return { ...post, liked, likes: post.likes + (liked ? 1 : -1) }
-      })
-    )
+  const toggleLike = async (id: string) => {
+    const post = posts.find((entry) => entry.id === id)
+    if (!post) return
+    const liked = !post.liked
+    patchPost(id, { liked, likes: Math.max(0, post.likes + (liked ? 1 : -1)) })
+    try {
+      const serverLiked = await apiToggleLike(post)
+      if (serverLiked !== undefined && serverLiked !== liked) {
+        patchPost(id, { liked: serverLiked, likes: post.likes + (serverLiked ? 1 : 0) - (post.liked ? 1 : 0) })
+      }
+    } catch (err) {
+      patchPost(id, { liked: post.liked, likes: post.likes })
+      setActionError(errorMessage(err))
+    }
   }
 
   const toggleSaved = (id: string) => {
@@ -929,173 +996,203 @@ export const FeedBoard: React.FC = () => {
     })
   }
 
-  const hidePost = (id: string) => {
+  /** Runs a moderation call for a post with busy/error handling. */
+  const moderate = async (post: FeedPost, action: () => Promise<unknown>, onDone: () => void) => {
+    setBusyPost(post.id)
+    setActionError(null)
+    try {
+      await action()
+      onDone()
+    } catch (err) {
+      setActionError(errorMessage(err))
+    } finally {
+      setBusyPost(null)
+      setMenuId(null)
+      setConfirmDelete(null)
+    }
+  }
+
+  const removePost = (id: string) => {
     setPosts((current) => current.filter((post) => post.id !== id))
-    setMenuId(null)
     setSelectedId((current) => (current === id ? null : current))
-    setProfileUser(null)
   }
 
-  const openProfile = (username: string, postId?: string) => {
+  const postMenu = (post: FeedPost) => {
+    const busy = busyPost === post.id
+    return (
+      <div className={styles.rowMenuList}>
+        {post.userId && (
+          <Link href={`/users/${post.userId}`} className={styles.menuItem}>
+            View author
+          </Link>
+        )}
+        {post.tab === 'gathr' && (
+          <>
+            <button
+              type="button"
+              className={styles.menuItem}
+              disabled={busy}
+              onClick={() => moderate(post, () => featureGathr(post.id), () => patchPost(post.id, { featured: !post.featured }))}
+            >
+              {post.featured ? 'Unfeature' : 'Feature'}
+            </button>
+            <button
+              type="button"
+              className={styles.menuItem}
+              disabled={busy}
+              onClick={() => {
+                const next = post.status === 'PAUSED' ? 'ACTIVE' : 'PAUSED'
+                moderate(post, () => setGathrStatus(post.id, next), () => patchPost(post.id, { status: next }))
+              }}
+            >
+              {post.status === 'PAUSED' ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              type="button"
+              className={`${styles.menuItem} ${styles.menuItemDanger}`}
+              disabled={busy}
+              onClick={() =>
+                confirmDelete === post.id
+                  ? moderate(post, () => setGathrStatus(post.id, 'REJECTED'), () => patchPost(post.id, { status: 'REJECTED' }))
+                  : setConfirmDelete(post.id)
+              }
+            >
+              {confirmDelete === post.id ? 'Click again to reject' : 'Reject'}
+            </button>
+          </>
+        )}
+        {post.tab === 'impact' && (
+          <button
+            type="button"
+            className={`${styles.menuItem} ${styles.menuItemDanger}`}
+            disabled={busy}
+            onClick={() =>
+              confirmDelete === post.id
+                ? moderate(post, () => deleteImpactPost(post.id), () => removePost(post.id))
+                : setConfirmDelete(post.id)
+            }
+          >
+            {busy ? <InlineSpinner /> : confirmDelete === post.id ? 'Click again to delete' : 'Delete post'}
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  const openProfile = (userId?: string) => {
     setMenuId(null)
-    setProfileUser(username)
-    if (postId) setSelectedId(postId)
+    if (userId) router.push(`/users/${userId}`)
   }
 
-  const closeDrawer = () => {
-    setProfileUser(null)
-    setSelectedId(null)
-  }
+  const closeDrawer = () => setSelectedId(null)
 
   const openPost = (event: React.MouseEvent, id: string) => {
     const target = event.target as HTMLElement
     if (target.closest('button, a, input, textarea, [data-menu-root]')) return
     setDraft('')
     setSortOpen(false)
-    setProfileUser(null)
+    setLoadedReplies({})
     setSelectedId(id)
   }
 
-  const toggleCommentLike = (id: string) => {
-    const toggle = <T extends { id: string; liked: boolean; likes: number; replies?: T[] }>(node: T): T => {
-      if (node.id === id) {
-        const liked = !node.liked
-        return { ...node, liked, likes: node.likes + (liked ? 1 : -1) }
+  /** Lazily fetch a thread's replies the first time it opens. */
+  const expandThread = async (id: string) => {
+    if (loadedReplies[id]) return
+    const find = (nodes: FeedReply[]): FeedReply | undefined => {
+      for (const node of nodes) {
+        if (node.id === id) return node
+        const hit = find(node.replies ?? [])
+        if (hit) return hit
       }
-      if (!node.replies?.length) return node
-      return { ...node, replies: node.replies.map((reply) => toggle(reply)) }
+      return undefined
     }
-    setComments((current) => {
-      return current.map((comment) => {
-        if (comment.id === id) {
-          const liked = !comment.liked
-          return { ...comment, liked, likes: comment.likes + (liked ? 1 : -1) }
-        }
-        if (!comment.replies?.length) return comment
-        return { ...comment, replies: comment.replies.map((reply) => toggle(reply)) }
-      })
-    })
-  }
-
-  const hideComment = (id: string) => {
-    const removeReplies = (replies: FeedReply[]): { replies: FeedReply[]; removed: boolean } => {
-      let removed = false
-      const next: FeedReply[] = []
-      for (const reply of replies) {
-        if (reply.id === id) {
-          removed = true
-          continue
-        }
-        const nested = reply.replies ?? []
-        const child = removeReplies(nested)
-        if (child.removed) {
-          removed = true
-          next.push({
-            ...reply,
-            replies: child.replies,
-            replyCount: Math.max(0, (reply.replyCount ?? nested.length) - 1)
-          })
-        } else {
-          next.push(reply)
-        }
-      }
-      return { replies: next, removed }
-    }
-
-    setComments((current) => {
-      if (current.some((comment) => comment.id === id)) {
-        return current.filter((comment) => comment.id !== id)
-      }
-      return current.map((comment) => {
-        const child = removeReplies(comment.replies)
-        if (!child.removed) return comment
-        return {
-          ...comment,
-          replies: child.replies,
-          replyCount: Math.max(0, (comment.replyCount ?? comment.replies.length) - 1)
-        }
-      })
-    })
-    setMenuId(null)
-  }
-
-  const addReply = (parentId: string, text: string) => {
-    const reply: FeedReply = {
-      id: `local-${Date.now()}`,
-      username: '@you',
-      avatarUrl: youAvatar,
-      time: 'Just now',
-      body: text,
-      likes: 0,
-      liked: false,
-      replies: []
-    }
-
-    const insert = (replies: FeedReply[]): FeedReply[] =>
-      replies.map((node) => {
-        if (node.id === parentId) {
-          const nested = node.replies ?? []
-          return {
-            ...node,
-            replies: [...nested, reply],
-            replyCount: (node.replyCount ?? nested.length) + 1
-          }
-        }
-        const nested = node.replies ?? []
-        if (nested.length === 0) return node
-        return { ...node, replies: insert(nested) }
-      })
-
-    setComments((current) =>
-      current.map((comment) => {
-        if (comment.id === parentId) {
-          return {
-            ...comment,
-            replies: [...comment.replies, reply],
-            replyCount: (comment.replyCount ?? comment.replies.length) + 1
-          }
-        }
-        return { ...comment, replies: insert(comment.replies) }
-      })
-    )
-    if (selectedId) {
-      setPosts((current) =>
-        current.map((post) =>
-          post.id === selectedId ? { ...post, comments: post.comments + 1 } : post
+    const node = find(comments)
+    if (!node || (node.replyCount ?? 0) === 0 || (node.replies?.length ?? 0) >= (node.replyCount ?? 0)) return
+    setLoadedReplies((current) => ({ ...current, [id]: true }))
+    try {
+      const replies = await listReplies(id)
+      const insert = <T extends FeedReply>(nodes: T[]): T[] =>
+        nodes.map((entry) =>
+          entry.id === id ? { ...entry, replies } : { ...entry, replies: insert(entry.replies ?? []) }
         )
-      )
+      commentsRes.mutate((current) => (current ? insert(current) : current))
+    } catch (err) {
+      setLoadedReplies((current) => {
+        const next = { ...current }
+        delete next[id]
+        return next
+      })
+      setActionError(errorMessage(err))
     }
   }
 
-  const addComment = () => {
+  const hideComment = async (id: string) => {
+    setMenuId(null)
+    try {
+      await deleteComment(id)
+    } catch (err) {
+      setActionError(errorMessage(err))
+      return
+    }
+    const prune = <T extends FeedReply>(nodes: T[]): T[] =>
+      nodes
+        .filter((node) => node.id !== id)
+        .map((node) => {
+          const before = node.replies ?? []
+          const after = prune(before)
+          return after.length === before.length
+            ? node
+            : { ...node, replies: after, replyCount: Math.max(0, (node.replyCount ?? before.length) - 1) }
+        })
+    commentsRes.mutate((current) => (current ? prune(current) : current))
+    if (selectedId) {
+      const post = posts.find((entry) => entry.id === selectedId)
+      if (post) patchPost(post.id, { comments: Math.max(0, post.comments - 1) })
+    }
+  }
+
+  const addReply = async (parentId: string, text: string) => {
+    if (!selectedPost) return
+    try {
+      const reply = await createComment(selectedPost, text, parentId)
+      const insert = <T extends FeedReply>(nodes: T[]): T[] =>
+        nodes.map((node) =>
+          node.id === parentId
+            ? {
+                ...node,
+                replies: [...(node.replies ?? []), reply],
+                replyCount: (node.replyCount ?? node.replies?.length ?? 0) + 1
+              }
+            : { ...node, replies: insert(node.replies ?? []) }
+        )
+      commentsRes.mutate((current) => (current ? insert(current) : current))
+      patchPost(selectedPost.id, { comments: selectedPost.comments + 1 })
+    } catch (err) {
+      setActionError(errorMessage(err))
+    }
+  }
+
+  const addComment = async () => {
     const text = draft.trim()
-    if (!text || !selectedId) return
-    setComments((current) => [
-      {
-        id: `local-${Date.now()}`,
-        postId: selectedId,
-        username: '@you',
-        avatarUrl:
-          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
-        time: 'Just now',
-        body: text,
-        likes: 0,
-        liked: false,
-        replies: []
-      },
-      ...current
-    ])
-    setPosts((current) =>
-      current.map((post) =>
-        post.id === selectedId ? { ...post, comments: post.comments + 1 } : post
-      )
-    )
-    setDraft('')
-    setCommentSort('latest')
+    if (!text || !selectedPost || posting) return
+    setPosting(true)
+    setActionError(null)
+    try {
+      const created = await createComment(selectedPost, text)
+      const comment: FeedComment = { ...created, postId: selectedPost.id, replies: [] }
+      commentsRes.mutate((current) => [comment, ...(current ?? [])])
+      patchPost(selectedPost.id, { comments: selectedPost.comments + 1 })
+      setDraft('')
+      setCommentSort('latest')
+    } catch (err) {
+      setActionError(errorMessage(err))
+    } finally {
+      setPosting(false)
+    }
   }
 
   const sharePost = async (post: FeedPost) => {
-    const text = `${post.username}: ${post.caption}`
+    const text = `${post.username}: ${post.title ?? post.caption}`
     if (navigator.share) {
       try {
         await navigator.share({ title: 'Gathr feed', text })
@@ -1105,23 +1202,6 @@ export const FeedBoard: React.FC = () => {
       }
     }
     await navigator.clipboard?.writeText(text)
-  }
-
-  const sendBroadcast = () => {
-    const text = message.trim()
-    if (!text) return
-    const audienceLabel = activeAudience.label
-    setActivity((current) => [
-      {
-        id: `broadcast-${Date.now()}`,
-        time: 'Just now',
-        actor: 'You',
-        detail: `broadcast to ${audienceLabel}: ${text}`
-      },
-      ...current
-    ])
-    setMessage('')
-    setShowAllActivity(true)
   }
 
   return (
@@ -1197,23 +1277,31 @@ export const FeedBoard: React.FC = () => {
             })}
           </div>
 
+          {actionError && <ErrorState message={actionError} compact />}
+
           <div className={styles.feed} key={`${tab}-${gathrFilter}`}>
-            {visiblePosts.length === 0 && (
+            {feed.error && posts.length === 0 && <ErrorState message={feed.error} onRetry={feed.reload} />}
+            {feed.initialLoading &&
+              Array.from({ length: 3 }, (_, index) => (
+                <div key={index} className={`${styles.post} ${styles.postSkeleton}`} aria-hidden="true" />
+              ))}
+            {!feed.loading && !feed.error && posts.length === 0 && (
               <p className={styles.empty}>No posts match this view.</p>
             )}
-            {visiblePosts.map((post) => (
+            {posts.map((post) => (
               <article
                 key={post.id}
                 className={`${styles.post} ${selectedId === post.id ? styles.postSelected : ''}`}
                 onClick={(event) => openPost(event, post.id)}
+                aria-busy={busyPost === post.id}
               >
                 <div className={styles.postHeader}>
                   <button
                     type="button"
                     className={styles.identityButton}
-                    onClick={() => openProfile(post.username, post.id)}
+                    onClick={() => openProfile(post.userId)}
                   >
-                    <Image src={post.avatarUrl} alt="" width={40} height={40} className={styles.avatar} />
+                    <Avatar src={post.avatarUrl} size={40} className={styles.avatar} />
                     <div className={styles.identity}>
                       <div className={styles.nameRow}>
                         <span className={styles.username}>{post.username}</span>
@@ -1228,22 +1316,20 @@ export const FeedBoard: React.FC = () => {
                       className={styles.moreButton}
                       aria-label={`Actions for ${post.username}`}
                       aria-expanded={menuId === post.id}
-                      onClick={() => setMenuId(menuId === post.id ? null : post.id)}
+                      onClick={() => {
+                        setConfirmDelete(null)
+                        setMenuId(menuId === post.id ? null : post.id)
+                      }}
                     >
-                      <MoreHorizontal className={styles.moreIcon} />
+                      {busyPost === post.id ? <InlineSpinner /> : <MoreHorizontal className={styles.moreIcon} />}
                     </button>
-                    {menuId === post.id && (
-                      <div className={styles.rowMenuList}>
-                        <button type="button" className={styles.menuItem} onClick={() => hidePost(post.id)}>
-                          Hide post
-                        </button>
-                      </div>
-                    )}
+                    {menuId === post.id && postMenu(post)}
                   </div>
                 </div>
 
-                <p className={styles.caption}>{post.caption}</p>
+                <PostText post={post} />
 
+                {post.images.length > 0 && (
                 <div className={styles.media}>
                   <PostPhotos
                     images={post.images}
@@ -1289,6 +1375,7 @@ export const FeedBoard: React.FC = () => {
                     </div>
                   )}
                 </div>
+                )}
 
                 <div className={styles.actions}>
                   <div className={styles.actionGroup}>
@@ -1334,6 +1421,19 @@ export const FeedBoard: React.FC = () => {
                 </div>
               </article>
             ))}
+
+            {feed.hasMore && (
+              <button
+                type="button"
+                className={styles.loadMore}
+                onClick={feed.loadMore}
+                disabled={feed.loading}
+              >
+                {feed.loading ? <InlineSpinner /> : null}
+                {feed.loading ? 'Loading' : `Load more${feed.total ? ` (${posts.length} of ${feed.total.toLocaleString('en-US')})` : ''}`}
+              </button>
+            )}
+            {feed.error && posts.length > 0 && <ErrorState message={feed.error} onRetry={feed.loadMore} compact />}
           </div>
         </div>
 
@@ -1341,17 +1441,9 @@ export const FeedBoard: React.FC = () => {
           className={`${styles.rail} ${mountedDrawer ? styles.railDetail : ''} ${shellIn ? styles.shellIn : ''}`}
           data-detail={mountedDrawer ? 'open' : undefined}
           ref={railRef}
-          aria-label={panelProfile ? 'User profile' : panelPost ? 'Post details' : 'Feed tools'}
+          aria-label={panelPost ? 'Post details' : 'Feed tools'}
         >
-          {mountedDrawer && panelProfile ? (
-            <ProfileDrawer
-              key={panelProfile.username}
-              profile={panelProfile}
-              motion={panelMotion}
-              onClose={closeDrawer}
-              onBack={() => setProfileUser(null)}
-            />
-          ) : mountedDrawer && panelPost ? (
+          {mountedDrawer && panelPost ? (
             <PostDetail
               key={panelPost.id}
               motion={panelMotion}
@@ -1359,6 +1451,8 @@ export const FeedBoard: React.FC = () => {
               imageSlide={imageSlides[panelPost.id] ?? restingSlide}
               saved={savedIds.includes(panelPost.id)}
               comments={panelComments}
+              commentsState={commentsRes}
+              posting={posting}
               sort={commentSort}
               sortOpen={sortOpen}
               draft={draft}
@@ -1369,10 +1463,11 @@ export const FeedBoard: React.FC = () => {
               onSave={() => toggleSaved(panelPost.id)}
               onShowImage={(delta) => showImage(panelPost.id, panelPost.images.length, delta)}
               onSelectImage={(index) => selectImage(panelPost.id, index)}
-              onToggleMenu={() =>
+              onToggleMenu={() => {
+                setConfirmDelete(null)
                 setMenuId(menuId === panelPost.id ? null : panelPost.id)
-              }
-              onHide={() => hidePost(panelPost.id)}
+              }}
+              postMenu={postMenu(panelPost)}
               menuOpen={menuId === panelPost.id}
               onDraft={setDraft}
               onSubmit={addComment}
@@ -1381,11 +1476,11 @@ export const FeedBoard: React.FC = () => {
                 setSortOpen(false)
               }}
               onToggleSort={() => setSortOpen((open) => !open)}
-              onCommentLike={toggleCommentLike}
               onCommentMenu={(id) => setMenuId(menuId === id ? null : id)}
               onHideComment={hideComment}
               onAddReply={addReply}
-              onOpenProfile={(username) => openProfile(username)}
+              onExpandThread={expandThread}
+              onOpenProfile={openProfile}
             />
           ) : (
           <>
@@ -1410,19 +1505,29 @@ export const FeedBoard: React.FC = () => {
 
           <section className={styles.card}>
             <h2 className={styles.cardTitle}>Recent activity</h2>
-            <ul className={styles.activityList}>
-              {visibleActivity.map((item) => (
-                <li key={item.id} className={styles.activityItem}>
-                  <span className={styles.activityDot} />
-                  <div>
-                    <p className={styles.activityTime}>{item.time}</p>
-                    <p className={styles.activityText}>
-                      <strong>{item.actor}</strong> {item.detail}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {audit.error ? (
+              <ErrorState message={audit.error} onRetry={audit.reload} compact />
+            ) : audit.loading && !audit.data ? (
+              <p className={styles.replyLoading}>
+                <InlineSpinner /> Loading…
+              </p>
+            ) : activity.length === 0 ? (
+              <p className={styles.empty}>No admin activity yet.</p>
+            ) : (
+              <ul className={styles.activityList}>
+                {visibleActivity.map((item) => (
+                  <li key={item.id} className={styles.activityItem}>
+                    <span className={styles.activityDot} />
+                    <div>
+                      <p className={styles.activityTime}>{item.time}</p>
+                      <p className={styles.activityText}>
+                        <strong>{item.actor}</strong> {item.detail}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
             {activity.length > 3 && (
               <button
                 type="button"
@@ -1474,22 +1579,12 @@ export const FeedBoard: React.FC = () => {
               placeholder="Message here..."
               value={message}
               rows={3}
+              disabled
               onChange={(event) => setMessage(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault()
-                  sendBroadcast()
-                }
-              }}
             />
             <div className={styles.broadcastFooter}>
-              <button
-                type="button"
-                className={styles.sendButton}
-                aria-label="Send broadcast"
-                disabled={!message.trim()}
-                onClick={sendBroadcast}
-              >
+              <span className={styles.broadcastNote}>Needs a broadcast endpoint from the API.</span>
+              <button type="button" className={styles.sendButton} aria-label="Send broadcast" disabled>
                 <Send className={styles.sendIcon} />
               </button>
             </div>

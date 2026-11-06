@@ -572,3 +572,28 @@
 .pendingTable td:nth-child(1) {
   width: 64px;
 }
+
+/* API wiring: extra statuses + busy states */
+.dotInactive {
+  background: #9ca3af;
+}
+
+.dotPending {
+  background: #f59e0b;
+}
+
+.toggleBusy {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.rejectButton:disabled,
+.acceptButton:disabled,
+.pageNumber:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.dotSuspended {
+  background: #f97316;
+}

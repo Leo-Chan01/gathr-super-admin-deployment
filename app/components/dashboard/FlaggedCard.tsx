@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react'
 import Image from 'next/image'
-import { X } from 'lucide-react'
+import { FileText, X } from 'lucide-react'
 import AvatarIllustration from './AvatarIllustration'
+import { InlineSpinner } from '../common/AsyncState'
 import styles from './FlaggedCard.module.css'
 
 export interface FlaggedItem {
@@ -25,25 +26,29 @@ interface FlaggedCardProps {
   item: FlaggedItem
   onReview?: (item: FlaggedItem) => void
   onDismiss?: (item: FlaggedItem) => void
+  /** Disables actions while a mutation for this card is in flight. */
+  busy?: boolean
 }
+
+const PREVIEW_LENGTH = 60
 
 export const FlaggedCard: React.FC<FlaggedCardProps> = ({
   item,
   onReview,
-  onDismiss
+  onDismiss,
+  busy = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const username =
     item.username ||
-    (item.name ? `@${item.name.toLowerCase().replace(/\s+/g, '_')}` : '@ademide_jerry')
-  const comment =
-    item.comment || 'This is actually really despicable. Racist content shoul...'
-  const targetImage =
-    item.targetImage ||
-    'https://images.unsplash.com/photo-1509099836639-18ba1795216d?w=300&auto=format&fit=crop&q=80'
+    (item.name ? `@${item.name.toLowerCase().replace(/\s+/g, '_')}` : 'Anonymous')
+  const comment = item.comment || 'No reason given'
+  const canExpand = item.hasMoreComment !== false && comment.length > PREVIEW_LENGTH
+  const shownComment =
+    canExpand && !isExpanded ? `${comment.slice(0, PREVIEW_LENGTH).trimEnd()}…` : comment
 
   return (
-    <div className={styles.card}>
+    <div className={styles.card} aria-busy={busy}>
       {/* Top Section: User & Flagged Comment */}
       <div className={styles.topSection}>
         <div className={styles.avatarContainer}>
@@ -67,8 +72,8 @@ export const FlaggedCard: React.FC<FlaggedCardProps> = ({
           </div>
 
           <p className={styles.commentText}>
-            {comment}{' '}
-            {item.hasMoreComment !== false && (
+            {shownComment}{' '}
+            {canExpand && (
               <button
                 type="button"
                 className={styles.moreButton}
@@ -84,13 +89,19 @@ export const FlaggedCard: React.FC<FlaggedCardProps> = ({
       {/* Middle Quoted Content Card */}
       <div className={styles.quotedContainer}>
         <div className={styles.quotedImageContainer}>
-          <Image
-            src={targetImage}
-            alt={item.targetTitle}
-            width={76}
-            height={76}
-            className={styles.quotedImage}
-          />
+          {item.targetImage ? (
+            <Image
+              src={item.targetImage}
+              alt={item.targetTitle}
+              width={76}
+              height={76}
+              className={styles.quotedImage}
+            />
+          ) : (
+            <span className={styles.quotedPlaceholder} aria-hidden="true">
+              <FileText />
+            </span>
+          )}
         </div>
         <p className={styles.quotedTitle}>{item.targetTitle}</p>
       </div>
@@ -101,15 +112,18 @@ export const FlaggedCard: React.FC<FlaggedCardProps> = ({
           type="button"
           onClick={() => onDismiss?.(item)}
           className={styles.dismissButton}
-          aria-label="Dismiss flagged content"
+          aria-label="Dismiss report"
+          title="Dismiss report"
+          disabled={busy}
         >
-          <X className={styles.dismissIcon} />
+          {busy ? <InlineSpinner /> : <X className={styles.dismissIcon} />}
         </button>
 
         <button
           type="button"
           onClick={() => onReview?.(item)}
           className={styles.reviewButton}
+          disabled={busy}
         >
           Review
         </button>
@@ -119,4 +133,3 @@ export const FlaggedCard: React.FC<FlaggedCardProps> = ({
 }
 
 export default FlaggedCard
-

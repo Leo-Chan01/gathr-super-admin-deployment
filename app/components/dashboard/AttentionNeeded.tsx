@@ -1,187 +1,194 @@
 'use client'
 
 import React, { useRef, useState } from 'react'
+import Link from 'next/link'
 import KYCCard, { KYCItem } from './KYCCard'
-import WithdrawalCard, { WithdrawalItem } from './WithdrawalCard'
+import WithdrawalCard from './WithdrawalCard'
 import FlaggedCard, { FlaggedItem } from './FlaggedCard'
 import KYCDetailDrawer from './KYCDetailDrawer'
+import ReportReviewDrawer from '../reports/ReportReviewDrawer'
+import WithdrawalDetailDrawer from '../wallets/WithdrawalDetailDrawer'
+import { ErrorState, SkeletonGrid } from '../common/AsyncState'
 import { useReflow, useTabIndicator } from '../motion/useMotion'
+import {
+  approveKyc,
+  listFlaggedContent,
+  listPendingKyc,
+  listWithdrawals,
+  rejectKyc,
+  reviewReport
+} from '../../lib/api/admin'
+import { toKycItem, toReportItem, toWithdrawalItem } from '../../lib/api/adapters'
+import { errorMessage } from '../../lib/api/client'
+import type { Page } from '../../lib/api/types'
+import { useResource } from '../../lib/hooks/useResource'
 import styles from './AttentionNeeded.module.css'
 
 type TabType = 'flagged' | 'kyc' | 'withdrawal'
 
-interface TabConfig {
-  key: TabType
-  label: string
-  count: number
-}
-
 const tabOrder: TabType[] = ['flagged', 'kyc', 'withdrawal']
 
-const tabs: TabConfig[] = [
-  { key: 'flagged', label: 'Flagged content', count: 14 },
-  { key: 'kyc', label: 'Pending KYC', count: 247 },
-  { key: 'withdrawal', label: 'Withdrawal request', count: 24 }
-]
+const tabMeta: Record<TabType, { label: string; href: string; limit: number }> = {
+  flagged: { label: 'Flagged content', href: '/reports', limit: 6 },
+  kyc: { label: 'Pending KYC', href: '/users?tab=pending', limit: 8 },
+  withdrawal: { label: 'Withdrawal request', href: '/wallets', limit: 6 }
+}
 
-// Mock KYC items (16 items to fill 4x4 grid as in screenshot)
-const initialKycItems: KYCItem[] = Array.from({ length: 16 }, (_, i) => ({
-  id: `kyc-${i + 1}`,
-  name: 'The Mindgeek Collective',
-  category: 'Non-profit',
-  timeAgo: '2hrs ago',
-  docsSubmitted: 2,
-  totalDocs: 2,
-  documents: [
-    {
-      id: 'doc-1',
-      title: 'TIN Document',
-      fileType: 'PDF',
-      fileSize: '2.4 MB',
-      status: 'Uploaded'
-    },
-    {
-      id: 'doc-2',
-      title: 'Certificate of Incorporation',
-      fileType: 'PDF',
-      fileSize: '1.8 MB',
-      status: 'Uploaded'
-    }
-  ]
-}))
+const mapPage = <T,>(page: Page<Record<string, unknown>>, map: (raw: Record<string, unknown>) => T) => ({
+  items: page.items.map(map),
+  total: page.meta.totalItems
+})
 
-// Mock Withdrawal items (6 items in 3x2 grid as in screenshot)
-const withdrawalItems: WithdrawalItem[] = Array.from({ length: 6 }, (_, i) => ({
-  id: `w-${i + 1}`,
-  name: 'The Mindgeek Collective',
-  category: 'Non-profit',
-  timeAgo: '2hrs ago',
-  amount: '$150,000',
-  bankName: 'Wema Bank',
-  accountLast4: '6734',
-  walletType: 'Campaign wallet',
-  campaignName: 'Help Alex raise the money for his ...',
-  thumbnailUrl:
-    'https://images.unsplash.com/photo-1509099836639-18ba1795216d?w=150&auto=format&fit=crop&q=80'
-}))
+const without =
+  (id: string) =>
+  <T extends { id: string | number }>(current: { items: T[]; total: number } | undefined) =>
+    current
+      ? { items: current.items.filter((item) => String(item.id) !== id), total: Math.max(0, current.total - 1) }
+      : current
 
-// Mock Flagged items
-const flaggedItems: FlaggedItem[] = [
-  {
-    id: 'flag-1',
-    username: '@ademide_jerry',
-    name: 'Ademide Jerry',
-    timeAgo: '2hrs ago',
-    comment: 'This is actually really despicable. Racist content shoul...',
-    targetTitle: 'A close friend named Alex is in need of immediate surgery.',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-    targetImage:
-      'https://images.unsplash.com/photo-1509099836639-18ba1795216d?w=300&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'flag-2',
-    username: '@sarah_daniels',
-    name: 'Sarah Daniels',
-    timeAgo: '3hrs ago',
-    comment: 'This campaign contains copyright protected imagery without permission...',
-    targetTitle: 'Help rebuild the Springfield Community Center after storm damage.',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
-    targetImage:
-      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=300&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'flag-3',
-    username: '@michael_c',
-    name: 'Michael Chen',
-    timeAgo: '5hrs ago',
-    comment: 'Misleading fundraiser goal and suspicious fund beneficiary details...',
-    targetTitle: 'Clean Water Initiative for Rural Schools & Orphanages.',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80',
-    targetImage:
-      'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=300&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'flag-4',
-    username: '@ademide_jerry',
-    name: 'Ademide Jerry',
-    timeAgo: '6hrs ago',
-    comment: 'This is actually really despicable. Racist content shoul...',
-    targetTitle: 'Emergency medical expenses for baby Lucas cardiology care.',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-    targetImage:
-      'https://images.unsplash.com/photo-1516549655169-df83a0774514?w=300&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'flag-5',
-    username: '@karen_white',
-    name: 'Karen White',
-    timeAgo: '8hrs ago',
-    comment: 'Unverified medical claims and misleading promotional descriptions...',
-    targetTitle: 'Support local animal shelter expansion project winter 2026.',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
-    targetImage:
-      'https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=300&auto=format&fit=crop&q=80'
-  },
-  {
-    id: 'flag-6',
-    username: '@david_ross',
-    name: 'David Ross',
-    timeAgo: '12hrs ago',
-    comment: 'Spam comments promoting unrelated commercial crypto projects...',
-    targetTitle: 'Scholarship endowment for underprivileged tech students.',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80',
-    targetImage:
-      'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=300&auto=format&fit=crop&q=80'
-  }
-]
+interface AttentionNeededProps {
+  /** Queue sizes from GET /admin/dashboard; falls back to each list's total. */
+  counts?: { flagged?: number; kyc?: number; withdrawals?: number }
+  /** Called after an item leaves a queue so the parent can refresh counts. */
+  onQueueChange?: () => void
+}
 
-export const AttentionNeeded: React.FC = () => {
+export const AttentionNeeded: React.FC<AttentionNeededProps> = ({ counts = {}, onQueueChange }) => {
   const [activeTab, setActiveTab] = useState<TabType>('kyc')
   const [direction, setDirection] = useState<1 | -1>(1)
-  const [showAll, setShowAll] = useState(false)
-  const [kycList, setKycList] = useState<KYCItem[]>(initialKycItems)
-  const [flaggedList, setFlaggedList] = useState<FlaggedItem[]>(flaggedItems)
   const [selectedKYCItem, setSelectedKYCItem] = useState<KYCItem | null>(null)
+  const [reviewId, setReviewId] = useState<string | null>(null)
+  const [withdrawalId, setWithdrawalId] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const { tabsRef, indicator } = useTabIndicator(activeTab)
   const flaggedGridRef = useRef<HTMLDivElement>(null)
   const beginFlaggedRemove = useReflow(flaggedGridRef)
 
-  const getActiveCount = () => {
-    switch (activeTab) {
-      case 'kyc':
-        return { showing: kycList.length, total: 247 }
-      case 'withdrawal':
-        return { showing: withdrawalItems.length, total: 24 }
-      case 'flagged':
-        return { showing: flaggedList.length, total: 14 }
-    }
+  const flagged = useResource(
+    (signal) =>
+      listFlaggedContent({ page: 1, limit: tabMeta.flagged.limit }, { signal }).then((p) => mapPage(p, toReportItem)),
+    []
+  )
+  const kyc = useResource(
+    (signal) => listPendingKyc({ page: 1, limit: tabMeta.kyc.limit }, { signal }).then((p) => mapPage(p, toKycItem)),
+    []
+  )
+  const withdrawals = useResource(
+    (signal) =>
+      listWithdrawals({ page: 1, limit: tabMeta.withdrawal.limit, status: 'PENDING' }, { signal }).then((p) =>
+        mapPage(p, toWithdrawalItem)
+      ),
+    []
+  )
+
+  const resources = { flagged, kyc, withdrawal: withdrawals }
+  const countFor = (tab: TabType) => {
+    const fromDashboard = tab === 'flagged' ? counts.flagged : tab === 'kyc' ? counts.kyc : counts.withdrawals
+    return fromDashboard ?? resources[tab].data?.total
   }
 
-  const { showing, total } = getActiveCount()
+  const active = resources[activeTab]
+  const showing = active.data?.items.length ?? 0
+  const total = countFor(activeTab) ?? showing
 
-  const handleAcceptKYC = (item: KYCItem) => {
-    setKycList((prev) => prev.filter((k) => k.id !== item.id))
+  /** Drop an item locally, then refresh counts. */
+  const removeFrom = (tab: 'flagged' | 'kyc', id: string) => {
+    if (tab === 'flagged') flagged.mutate(without(id))
+    else kyc.mutate(without(id))
+    onQueueChange?.()
   }
 
-  const handleRejectKYC = (item: KYCItem) => {
-    setKycList((prev) => prev.filter((k) => k.id !== item.id))
+  const handleAcceptKYC = async (item: KYCItem) => {
+    await approveKyc(String(item.id))
+    removeFrom('kyc', String(item.id))
+  }
+
+  const handleRejectKYC = async (item: KYCItem, reason: string) => {
+    await rejectKyc(String(item.id), reason)
+    removeFrom('kyc', String(item.id))
   }
 
   const selectTab = (next: TabType) => {
     if (next === activeTab) return
     setDirection(tabOrder.indexOf(next) > tabOrder.indexOf(activeTab) ? 1 : -1)
     setActiveTab(next)
+    setActionError(null)
   }
 
-  const dismissFlagged = (item: FlaggedItem) => {
-    beginFlaggedRemove(String(item.id))
-    setFlaggedList((current) => current.filter((entry) => entry.id !== item.id))
+  const dismissFlagged = async (item: FlaggedItem) => {
+    const id = String(item.id)
+    setBusyId(id)
+    setActionError(null)
+    try {
+      await reviewReport(id, 'DISMISSED', 'Dismissed from dashboard')
+      beginFlaggedRemove(id)
+      removeFrom('flagged', id)
+    } catch (err) {
+      setActionError(errorMessage(err))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const renderBody = () => {
+    if (active.error) return <ErrorState message={active.error} onRetry={active.reload} />
+
+    if (active.loading && !active.data) {
+      const gridClass =
+        activeTab === 'kyc' ? styles.kycGrid : activeTab === 'flagged' ? styles.flaggedGrid : styles.withdrawalGrid
+      return (
+        <SkeletonGrid
+          count={tabMeta[activeTab].limit}
+          className={gridClass}
+          height={activeTab === 'kyc' ? 110 : 200}
+        />
+      )
+    }
+
+    if (activeTab === 'flagged') {
+      const items = flagged.data?.items ?? []
+      return items.length > 0 ? (
+        <div className={styles.flaggedGrid} ref={flaggedGridRef}>
+          {items.map((item) => (
+            <div key={item.id} data-flip-id={String(item.id)} className={styles.flipItem}>
+              <FlaggedCard
+                item={item}
+                busy={busyId === String(item.id)}
+                onDismiss={dismissFlagged}
+                onReview={(entry) => setReviewId(String(entry.id))}
+              />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className={styles.empty}>No flagged content needs attention.</p>
+      )
+    }
+
+    if (activeTab === 'kyc') {
+      const items = kyc.data?.items ?? []
+      return items.length > 0 ? (
+        <div className={styles.kycGrid}>
+          {items.map((item) => (
+            <KYCCard key={item.id} item={item} onClick={() => setSelectedKYCItem(item)} />
+          ))}
+        </div>
+      ) : (
+        <p className={styles.empty}>No verifications waiting for review.</p>
+      )
+    }
+
+    const items = withdrawals.data?.items ?? []
+    return items.length > 0 ? (
+      <div className={styles.withdrawalGrid}>
+        {items.map((item) => (
+          <WithdrawalCard key={item.id} item={item} onView={() => setWithdrawalId(String(item.id))} />
+        ))}
+      </div>
+    ) : (
+      <p className={styles.empty}>No pending withdrawal requests.</p>
+    )
   }
 
   return (
@@ -206,21 +213,21 @@ export const AttentionNeeded: React.FC = () => {
               }}
             />
           )}
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.key
+          {tabOrder.map((key) => {
+            const isActive = activeTab === key
+            const count = countFor(key)
             return (
               <button
-                key={tab.key}
+                key={key}
                 type="button"
                 role="tab"
                 aria-selected={isActive}
-                onClick={() => selectTab(tab.key)}
-                className={`${styles.tabButton} ${
-                  isActive ? styles.tabButtonActive : ''
-                }`}
+                onClick={() => selectTab(key)}
+                className={`${styles.tabButton} ${isActive ? styles.tabButtonActive : ''}`}
               >
                 <span>
-                  {tab.label} ({tab.count})
+                  {tabMeta[key].label}
+                  {count !== undefined && ` (${count.toLocaleString('en-US')})`}
                 </span>
               </button>
             )
@@ -228,61 +235,27 @@ export const AttentionNeeded: React.FC = () => {
         </div>
       </div>
 
+      {actionError && <ErrorState message={actionError} compact />}
+
       {/* Grid Content */}
       <div className={styles.contentGridArea}>
         <div
           key={activeTab}
           className={`${styles.pane} ${direction < 0 ? styles.paneBack : ''}`}
         >
-          {activeTab === 'flagged' && (
-            flaggedList.length > 0 ? (
-              <div className={styles.flaggedGrid} ref={flaggedGridRef}>
-                {flaggedList.map((item) => (
-                  <div key={item.id} data-flip-id={String(item.id)} className={styles.flipItem}>
-                    <FlaggedCard item={item} onDismiss={dismissFlagged} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className={styles.empty}>No flagged content in this view.</p>
-            )
-          )}
-
-          {activeTab === 'kyc' && (
-            <div className={styles.kycGrid}>
-              {kycList.map((item) => (
-                <KYCCard
-                  key={item.id}
-                  item={item}
-                  onClick={() => setSelectedKYCItem(item)}
-                />
-              ))}
-            </div>
-          )}
-
-          {activeTab === 'withdrawal' && (
-            <div className={styles.withdrawalGrid}>
-              {withdrawalItems.map((item) => (
-                <WithdrawalCard key={item.id} item={item} />
-              ))}
-            </div>
-          )}
+          {renderBody()}
         </div>
       </div>
 
       {/* Footer Navigation Bar */}
       <div className={styles.footerBar}>
         <span className={styles.showingText}>
-          Showing {showing} of {total} items
+          Showing {showing} of {total.toLocaleString('en-US')} items
         </span>
 
-        <button
-          type="button"
-          onClick={() => setShowAll(!showAll)}
-          className={styles.viewAllButton}
-        >
-          {showAll ? 'Show less' : 'View all'}
-        </button>
+        <Link href={tabMeta[activeTab].href} className={styles.viewAllButton}>
+          View all
+        </Link>
       </div>
 
       {/* KYC Right Aside Drawer */}
@@ -293,6 +266,17 @@ export const AttentionNeeded: React.FC = () => {
         onAccept={handleAcceptKYC}
         onReject={handleRejectKYC}
       />
+
+      <ReportReviewDrawer
+        reportId={reviewId}
+        onClose={() => setReviewId(null)}
+        onReviewed={(id) => {
+          beginFlaggedRemove(id)
+          removeFrom('flagged', id)
+        }}
+      />
+
+      <WithdrawalDetailDrawer withdrawalId={withdrawalId} onClose={() => setWithdrawalId(null)} />
     </div>
   )
 }

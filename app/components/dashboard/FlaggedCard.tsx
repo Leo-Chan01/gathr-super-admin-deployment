@@ -6,6 +6,7 @@ import { FileText, X } from "lucide-react";
 import AvatarIllustration from "./AvatarIllustration";
 import { InlineSpinner } from "../common/AsyncState";
 import styles from "./FlaggedCard.module.css";
+import { imageSrc } from "../../lib/imageSrc";
 
 export interface FlaggedItem {
   id: string | number;
@@ -59,7 +60,7 @@ export const FlaggedCard: React.FC<FlaggedCardProps> = ({
         <div className={styles.avatarContainer}>
           {item.avatarUrl ? (
             <Image
-              src={item.avatarUrl}
+              src={imageSrc(item.avatarUrl)}
               alt={username}
               width={44}
               height={44}
@@ -96,7 +97,7 @@ export const FlaggedCard: React.FC<FlaggedCardProps> = ({
         <div className={styles.quotedImageContainer}>
           {item.targetImage ? (
             <Image
-              src={item.targetImage}
+              src={imageSrc(item.targetImage)}
               alt={item.targetTitle}
               width={76}
               height={76}

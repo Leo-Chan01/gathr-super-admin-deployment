@@ -27,6 +27,7 @@ import { useResource } from "../../lib/hooks/useResource";
 import { humanize, StatusBadge } from "./badges";
 import drawer from "../dashboard/KYCDetailDrawer.module.css";
 import styles from "./Support.module.css";
+import { imageSrc } from "../../lib/imageSrc";
 
 interface TicketDrawerProps {
   ticketId: string | null;
@@ -166,7 +167,7 @@ const Panel: React.FC<
             {data?.requester?.avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={data.requester.avatar}
+                src={imageSrc(data.requester.avatar)}
                 alt=""
                 className={styles.avatar}
                 referrerPolicy="no-referrer"

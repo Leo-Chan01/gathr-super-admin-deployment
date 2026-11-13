@@ -35,7 +35,7 @@ const tabOrder: TabType[] = ["flagged", "kyc", "withdrawal"];
 const tabMeta: Record<TabType, { label: string; href: string; limit: number }> =
   {
     flagged: { label: "Flagged content", href: "/reports", limit: 6 },
-    kyc: { label: "Pending KYC", href: "/users?tab=pending", limit: 8 },
+    kyc: { label: "Pending KYC", href: "/users?tab=pending", limit: 16 },
     withdrawal: { label: "Withdrawal request", href: "/wallets", limit: 6 },
   };
 

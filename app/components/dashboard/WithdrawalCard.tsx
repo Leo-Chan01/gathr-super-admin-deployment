@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Landmark, ShieldCheck, ChevronRight, Banknote } from "lucide-react";
 import AvatarIllustration from "./AvatarIllustration";
 import styles from "./WithdrawalCard.module.css";
+import { imageSrc } from "../../lib/imageSrc";
 
 export interface WithdrawalItem {
   id: string | number;
@@ -78,7 +79,7 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({
         <div className={styles.thumbnailContainer}>
           {item.thumbnailUrl ? (
             <Image
-              src={item.thumbnailUrl}
+              src={imageSrc(item.thumbnailUrl)}
               alt={item.campaignName}
               width={48}
               height={48}

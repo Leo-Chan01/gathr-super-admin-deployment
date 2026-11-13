@@ -12,6 +12,7 @@ import type { ReviewDecision } from "../../lib/api/types";
 import { useResource } from "../../lib/hooks/useResource";
 import drawer from "../dashboard/KYCDetailDrawer.module.css";
 import styles from "../common/DetailRows.module.css";
+import { imageSrc } from "../../lib/imageSrc";
 
 const DECISIONS: { value: ReviewDecision; label: string; hint: string }[] = [
   {
@@ -96,7 +97,7 @@ const ReviewPanel: React.FC<
           <div className={drawer.headerLeft}>
             {detail?.item.avatarUrl ? (
               <Image
-                src={detail.item.avatarUrl}
+                src={imageSrc(detail.item.avatarUrl)}
                 alt=""
                 width={44}
                 height={44}
@@ -157,7 +158,7 @@ const ReviewPanel: React.FC<
               {detail.item.targetImage && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={detail.item.targetImage}
+                  src={imageSrc(detail.item.targetImage)}
                   alt=""
                   className={styles.media}
                 />

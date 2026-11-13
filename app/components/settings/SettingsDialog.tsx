@@ -11,6 +11,7 @@ import { updateMe, uploadImage } from "@/app/lib/api/profile";
 import { InlineSpinner } from "../common/AsyncState";
 import AccessControl, { type AccessView } from "./AccessControl";
 import styles from "./SettingsDialog.module.css";
+import { imageSrc } from "../../lib/imageSrc";
 
 type SettingsTab = "general" | "access";
 
@@ -285,7 +286,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                     {avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={avatarUrl}
+                        src={imageSrc(avatarUrl)}
                         alt=""
                         className={styles.avatarPhoto}
                       />

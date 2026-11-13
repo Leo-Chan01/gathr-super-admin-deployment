@@ -18,6 +18,7 @@ import { ErrorState, InlineSpinner } from "../common/AsyncState";
 import { errorMessage } from "../../lib/api/client";
 import { timeAgo } from "../../lib/api/adapters";
 import styles from "./KYCDetailDrawer.module.css";
+import { imageSrc } from "../../lib/imageSrc";
 
 interface KYCDetailDrawerProps {
   isOpen: boolean;
@@ -186,7 +187,7 @@ const DrawerPanel: React.FC<
             {details.imageUrl ? (
               // Plain <img>: storage host isn't configured for next/image.
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={details.imageUrl} alt="" className={styles.logo} />
+              <img src={imageSrc(details.imageUrl)} alt="" className={styles.logo} />
             ) : (
               <AvatarIllustration />
             )}
@@ -423,7 +424,7 @@ const DrawerPanel: React.FC<
                         aria-label={`Enlarge ${doc.title}`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={doc.url} alt={doc.title} loading="lazy" />
+                        <img src={imageSrc(doc.url)} alt={doc.title} loading="lazy" />
                       </button>
                     )}
                     <div className={styles.documentItem}>
@@ -642,7 +643,7 @@ const DrawerPanel: React.FC<
           </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={preview.url}
+            src={imageSrc(preview.url)}
             alt={preview.title}
             onClick={(event) => event.stopPropagation()}
           />

@@ -20,6 +20,7 @@ import RestrictUserDialog, { type Restriction } from "./RestrictUserDialog";
 import { errorMessage } from "../../lib/api/client";
 import { useResource } from "../../lib/hooks/useResource";
 import styles from "./UserDetail.module.css";
+import { imageSrc } from "../../lib/imageSrc";
 
 const humanize = (value?: string | null) =>
   value
@@ -140,13 +141,13 @@ export const UserDetail: React.FC<{ id: string }> = ({ id }) => {
           <section className={`${styles.card} ${styles.profileCard}`}>
             {detail.bannerUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={detail.bannerUrl} alt="" className={styles.banner} />
+              <img src={imageSrc(detail.bannerUrl)} alt="" className={styles.banner} />
             )}
             <div className={styles.head}>
               <div className={styles.identity}>
                 {avatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={avatar} alt="" className={styles.avatar} />
+                  <img src={imageSrc(avatar)} alt="" className={styles.avatar} />
                 ) : (
                   <AvatarIllustration />
                 )}
@@ -389,7 +390,7 @@ const ContentCard: React.FC<{ post: FeedPost }> = ({ post }) => (
     {post.images[0] ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={post.images[0]}
+        src={imageSrc(post.images[0])}
         alt=""
         className={styles.contentImage}
         loading="lazy"

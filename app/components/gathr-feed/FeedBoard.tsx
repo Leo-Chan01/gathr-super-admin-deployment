@@ -54,6 +54,7 @@ import { errorMessage } from "../../lib/api/client";
 import { useDebounced, useResource } from "../../lib/hooks/useResource";
 import { useFeed } from "./useFeed";
 import styles from "./FeedBoard.module.css";
+import { imageSrc } from "../../lib/imageSrc";
 
 const tabs: { key: FeedTab; label: string; menu?: boolean }[] = [
   { key: "impact", label: "Impact" },
@@ -87,7 +88,7 @@ const Avatar: React.FC<{ src?: string; size: number; className: string }> = ({
   className,
 }) =>
   src ? (
-    <Image src={src} alt="" width={size} height={size} className={className} />
+    <Image src={imageSrc(src)} alt="" width={size} height={size} className={className} />
   ) : (
     <span
       className={className}
@@ -118,7 +119,7 @@ const PostPhotos: React.FC<{
         return (
           <Image
             key={`${src}-${imagePosition}`}
-            src={src}
+            src={imageSrc(src)}
             alt=""
             fill
             sizes={sizes}
@@ -1485,7 +1486,7 @@ export const FeedBoard: React.FC = () => {
                     onClick={() => openProfile(post.userId)}
                   >
                     <Avatar
-                      src={post.avatarUrl}
+                      src={imageSrc(post.avatarUrl)}
                       size={40}
                       className={styles.avatar}
                     />

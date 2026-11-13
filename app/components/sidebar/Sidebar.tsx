@@ -27,6 +27,7 @@ import {
   LogOut,
   X,
 } from "lucide-react";
+import { imageSrc } from "../../lib/imageSrc";
 
 interface NavigationTileItem {
   name: string;
@@ -195,7 +196,7 @@ const SideBar = () => {
                   // Plain <img>: avatars come from several hosts (S3, Google).
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={avatarUrl}
+                    src={imageSrc(avatarUrl)}
                     alt={displayName}
                     width={36}
                     height={36}

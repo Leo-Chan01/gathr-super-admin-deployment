@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { AlertTriangle, ChevronDown, X } from "lucide-react";
 import styles from "./DisbursalDialog.module.css";
+import { imageSrc } from "../../lib/imageSrc";
 
 type Step = "choose" | "send" | "amount" | "success";
 
@@ -359,7 +360,7 @@ export const DisbursalDialog: React.FC<DisbursalDialogProps> = ({
                           onClick={() => selectRecipient(person)}
                         >
                           <Image
-                            src={person.avatar}
+                            src={imageSrc(person.avatar)}
                             alt=""
                             width={32}
                             height={32}
@@ -392,7 +393,7 @@ export const DisbursalDialog: React.FC<DisbursalDialogProps> = ({
               </h2>
               <div className={styles.recipient}>
                 <Image
-                  src={recipient.avatar}
+                  src={imageSrc(recipient.avatar)}
                   alt=""
                   width={28}
                   height={28}

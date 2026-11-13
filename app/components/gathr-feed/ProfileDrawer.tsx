@@ -27,6 +27,7 @@ import {
   type UserProfile,
 } from "./feedData";
 import styles from "./FeedBoard.module.css";
+import { imageSrc } from "../../lib/imageSrc";
 
 const relations: Array<ReviewRelation | "All"> = [
   "All",
@@ -182,7 +183,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
       <div className={styles.cover}>
         <div className={styles.coverFrame}>
           <Image
-            src={profile.coverUrl}
+            src={imageSrc(profile.coverUrl)}
             alt=""
             fill
             sizes="420px"
@@ -242,7 +243,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
           />
         )}
         <Image
-          src={profile.avatarUrl}
+          src={imageSrc(profile.avatarUrl)}
           alt=""
           width={74}
           height={74}
@@ -450,7 +451,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                 <li key={review.id} className={styles.reviewCard}>
                   <div className={styles.reviewTop}>
                     <Image
-                      src={review.avatarUrl}
+                      src={imageSrc(review.avatarUrl)}
                       alt=""
                       width={36}
                       height={36}
@@ -463,7 +464,7 @@ export const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                       {relationIcon(review.relation)}
                       {review.relation}
                       <Image
-                        src={profile.avatarUrl}
+                        src={imageSrc(profile.avatarUrl)}
                         alt=""
                         width={18}
                         height={18}

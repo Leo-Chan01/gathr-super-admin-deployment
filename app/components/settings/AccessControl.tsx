@@ -12,6 +12,7 @@ import { listAssignees } from "@/app/lib/api/support";
 import type { Raw, UserRole } from "@/app/lib/api/types";
 import { useResource } from "@/app/lib/hooks/useResource";
 import styles from "./AccessControl.module.css";
+import { imageSrc } from "../../lib/imageSrc";
 
 type AdminRole = Exclude<UserRole, "USER">;
 
@@ -319,7 +320,7 @@ const MemberIdentity: React.FC<{ member: Member; suffix?: string }> = ({
     <span className={styles.avatar}>
       {member.avatar ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={member.avatar} alt="" referrerPolicy="no-referrer" />
+        <img src={imageSrc(member.avatar)} alt="" referrerPolicy="no-referrer" />
       ) : (
         <AvatarIllustration />
       )}

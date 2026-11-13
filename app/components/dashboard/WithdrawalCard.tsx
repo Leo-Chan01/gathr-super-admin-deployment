@@ -3,7 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import { Landmark, ShieldCheck, ChevronRight, Banknote } from "lucide-react";
-import AvatarIllustration from "./AvatarIllustration";
+import UserAvatar from "../common/UserAvatar";
 import styles from "./WithdrawalCard.module.css";
 import { imageSrc } from "../../lib/imageSrc";
 
@@ -17,6 +17,8 @@ export interface WithdrawalItem {
   accountLast4: string;
   walletType: string;
   campaignName: string;
+  /** Requester's `avatar` (or business logo). */
+  avatarUrl?: string;
   thumbnailUrl?: string;
   status?: string;
 }
@@ -35,7 +37,7 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({
       {/* Top Header Row */}
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <AvatarIllustration />
+          <UserAvatar src={item.avatarUrl} alt={item.name} />
           <div className={styles.headerInfo}>
             <h3 className={styles.title}>{item.name}</h3>
             <div className={styles.metaRow}>

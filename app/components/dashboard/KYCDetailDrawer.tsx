@@ -12,7 +12,7 @@ import {
   Link2,
   RotateCcw,
 } from "lucide-react";
-import AvatarIllustration from "./AvatarIllustration";
+import UserAvatar from "../common/UserAvatar";
 import { KYCItem, KYCDetails, KYCDocument } from "./KYCCard";
 import { ErrorState, InlineSpinner } from "../common/AsyncState";
 import { errorMessage } from "../../lib/api/client";
@@ -184,13 +184,10 @@ const DrawerPanel: React.FC<
         {/* Top Header */}
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            {details.imageUrl ? (
-              // Plain <img>: storage host isn't configured for next/image.
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageSrc(details.imageUrl)} alt="" className={styles.logo} />
-            ) : (
-              <AvatarIllustration />
-            )}
+            <UserAvatar
+              src={details.imageUrl}
+              imageClassName={styles.logo}
+            />
             <div className={styles.headerInfo}>
               <h2 className={styles.title}>{item.name}</h2>
               <div className={styles.metaRow}>

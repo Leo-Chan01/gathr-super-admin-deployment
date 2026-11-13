@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import Image from "next/image";
 import { X } from "lucide-react";
-import AvatarIllustration from "../dashboard/AvatarIllustration";
+import UserAvatar from "../common/UserAvatar";
 import { ErrorState, InlineSpinner } from "../common/AsyncState";
 import { getReport, reviewReport } from "../../lib/api/admin";
 import { toReportDetail } from "../../lib/api/adapters";
@@ -95,17 +94,10 @@ const ReviewPanel: React.FC<
       >
         <div className={drawer.header}>
           <div className={drawer.headerLeft}>
-            {detail?.item.avatarUrl ? (
-              <Image
-                src={imageSrc(detail.item.avatarUrl)}
-                alt=""
-                width={44}
-                height={44}
-                style={{ borderRadius: "50%" }}
-              />
-            ) : (
-              <AvatarIllustration />
-            )}
+            <UserAvatar
+              src={detail?.item.avatarUrl}
+              imageClassName={drawer.logo}
+            />
             <div className={drawer.headerInfo}>
               <h2 className={drawer.title}>
                 {detail?.item.username ?? detail?.item.name ?? "Report"}

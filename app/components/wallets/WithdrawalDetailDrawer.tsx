@@ -2,7 +2,7 @@
 
 import React from "react";
 import { X } from "lucide-react";
-import AvatarIllustration from "../dashboard/AvatarIllustration";
+import UserAvatar from "../common/UserAvatar";
 import { ErrorState } from "../common/AsyncState";
 import { getWithdrawal } from "../../lib/api/admin";
 import { toWithdrawalDetail } from "../../lib/api/adapters";
@@ -47,7 +47,10 @@ const Panel: React.FC<{ withdrawalId: string; onClose: () => void }> = ({
       >
         <div className={drawer.header}>
           <div className={drawer.headerLeft}>
-            <AvatarIllustration />
+            <UserAvatar
+              src={detail?.item.avatarUrl}
+              imageClassName={drawer.logo}
+            />
             <div className={drawer.headerInfo}>
               <h2 className={drawer.title}>
                 {detail?.item.name ?? "Withdrawal request"}

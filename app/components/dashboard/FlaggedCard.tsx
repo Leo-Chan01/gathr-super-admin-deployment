@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { FileText, X } from "lucide-react";
-import AvatarIllustration from "./AvatarIllustration";
+import UserAvatar from "../common/UserAvatar";
 import { InlineSpinner } from "../common/AsyncState";
 import styles from "./FlaggedCard.module.css";
 import { imageSrc } from "../../lib/imageSrc";
@@ -58,17 +58,12 @@ export const FlaggedCard: React.FC<FlaggedCardProps> = ({
       {/* Top Section: User & Flagged Comment */}
       <div className={styles.topSection}>
         <div className={styles.avatarContainer}>
-          {item.avatarUrl ? (
-            <Image
-              src={imageSrc(item.avatarUrl)}
-              alt={username}
-              width={44}
-              height={44}
-              className={styles.avatarImage}
-            />
-          ) : (
-            <AvatarIllustration className={styles.avatarIllustration} />
-          )}
+          <UserAvatar
+            src={item.avatarUrl}
+            alt={username}
+            className={styles.avatarIllustration}
+            imageClassName={styles.avatarImage}
+          />
         </div>
 
         <div className={styles.userContent}>

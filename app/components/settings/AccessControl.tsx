@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { ChevronDown, MoreHorizontal, Trash2 } from "lucide-react";
-import AvatarIllustration from "../dashboard/AvatarIllustration";
+import UserAvatar from "../common/UserAvatar";
 import { ErrorState, InlineSpinner } from "../common/AsyncState";
 import { useAuth } from "@/app/context/AuthContext";
 import { listUsers, searchUsers } from "@/app/lib/api/admin";
@@ -12,7 +12,6 @@ import { listAssignees } from "@/app/lib/api/support";
 import type { Raw, UserRole } from "@/app/lib/api/types";
 import { useResource } from "@/app/lib/hooks/useResource";
 import styles from "./AccessControl.module.css";
-import { imageSrc } from "../../lib/imageSrc";
 
 type AdminRole = Exclude<UserRole, "USER">;
 
@@ -318,12 +317,8 @@ const MemberIdentity: React.FC<{ member: Member; suffix?: string }> = ({
 }) => (
   <div className={styles.identity}>
     <span className={styles.avatar}>
-      {member.avatar ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageSrc(member.avatar)} alt="" referrerPolicy="no-referrer" />
-      ) : (
-        <AvatarIllustration />
-      )}
+      {/* Sized by `.avatar img` in the stylesheet. */}
+      <UserAvatar src={member.avatar} imageClassName="" />
     </span>
     <span className={styles.identityText}>
       <span className={styles.email}>{member.email}</span>

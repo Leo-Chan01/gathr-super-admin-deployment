@@ -308,6 +308,16 @@
   gap: 12px;
 }
 
+/* Same footprint as the compact AvatarIllustration it replaces. */
+.rowAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background-color: #faf7eb;
+}
+
 .status {
   display: inline-flex;
   align-items: center;

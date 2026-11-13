@@ -11,7 +11,7 @@ import { useAuth } from "../../context/AuthContext";
 import { str, userName } from "../../lib/api/adapters";
 import SidebarControlButton from "./SidebarControlButton";
 import SettingsDialog from "../settings/SettingsDialog";
-import AvatarIllustration from "../dashboard/AvatarIllustration";
+import UserAvatar from "../common/UserAvatar";
 import { getUnreadCount, UNREAD_EVENT } from "../../lib/api/notifications";
 import { useResource } from "../../lib/hooks/useResource";
 
@@ -27,7 +27,6 @@ import {
   LogOut,
   X,
 } from "lucide-react";
-import { imageSrc } from "../../lib/imageSrc";
 
 interface NavigationTileItem {
   name: string;
@@ -192,20 +191,11 @@ const SideBar = () => {
           <div className={styles.dashboardFooter}>
             <div className={styles.userProfile}>
               <div className={styles.avatarContainer}>
-                {avatarUrl ? (
-                  // Plain <img>: avatars come from several hosts (S3, Google).
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={imageSrc(avatarUrl)}
-                    alt={displayName}
-                    width={36}
-                    height={36}
-                    className={styles.avatarImage}
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <AvatarIllustration />
-                )}
+                <UserAvatar
+                  src={avatarUrl}
+                  alt={displayName}
+                  imageClassName={styles.avatarImage}
+                />
               </div>
               <div>
                 <p className={styles.userName}>{displayName}</p>

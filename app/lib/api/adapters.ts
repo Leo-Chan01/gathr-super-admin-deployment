@@ -87,6 +87,14 @@ const image = (source: unknown, ...paths: string[]): string | undefined => {
   return undefined;
 };
 
+/**
+ * A user's display image, per swagger: `avatar`, falling back to the business
+ * profile's `logoUrl` (the same fallback GathrAuthorDto documents for
+ * CHARITY/COMPANY accounts).
+ */
+const avatarOf = (user: unknown): string | undefined =>
+  image(user, "avatar", "avatarUrl", "profileImage", "businessProfile.logoUrl");
+
 // ---- Formatting ------------------------------------------------------------
 
 export const timeAgo = (iso: string | undefined): string => {
@@ -246,6 +254,8 @@ export interface UserRow {
   id: string;
   name: string;
   username?: string;
+  /** `avatar`, else `businessProfile.logoUrl` (list rows often only have the latter). */
+  avatarUrl?: string;
   email: string;
   phone: string;
   joined: string;
@@ -265,6 +275,7 @@ export const toUserRow = (raw: Raw): UserRow => {
     id: str(user, "id", "userId") ?? "",
     name: userName(user),
     username: handle(user),
+    avatarUrl: avatarOf(user),
     email: str(user, "email") ?? "—",
     phone: str(user, "phone", "phoneNumber") ?? "—",
     joined: shortDate(str(user, "createdAt", "joinedAt")),
@@ -327,7 +338,7 @@ export const toUserDetail = (raw: Raw): UserDetail => {
 
   return {
     ...row,
-    avatarUrl: image(user, "avatar", "avatarUrl", "profileImage"),
+    avatarUrl: avatarOf(user),
     bannerUrl: image(user, "bannerImage"),
     role: str(user, "role"),
     bio: str(user, "bio"),
@@ -539,7 +550,10 @@ export const toKycItem = (raw: Raw): KYCItem => {
 
   const details: KYCDetails = {
     kind: isOrganization ? "organization" : "individual",
-    imageUrl: profile?.logoUrl ?? image(entry, "avatar"),
+    // Organizations are reviewed by their logo; individuals by their avatar.
+    imageUrl: isOrganization
+      ? (profile?.logoUrl ?? avatarOf(entry))
+      : avatarOf(entry),
     fullName,
     username: entry.username ? `@${entry.username}` : undefined,
     email: entry.email ?? undefined,
@@ -610,6 +624,7 @@ export const toWithdrawalItem = (raw: Raw): WithdrawalItem => {
       ? "Campaign wallet"
       : humanize(str(raw, "walletType", "wallet.type")) || "Personal wallet",
     campaignName: str(gathr, "title", "name") ?? humanize(str(raw, "status")),
+    avatarUrl: avatarOf(user),
     thumbnailUrl: image(gathr, "coverImage", "image", "images", "media"),
     status: str(raw, "status"),
   };
@@ -668,7 +683,7 @@ export const toReportItem = (raw: Raw): ReportItem => {
     id: str(raw, "id") ?? "",
     name: userName(reporter),
     username: handle(reporter),
-    avatarUrl: image(reporter, "avatar", "avatarUrl"),
+    avatarUrl: avatarOf(reporter),
     timeAgo: timeAgo(str(raw, "createdAt")),
     comment: reason,
     hasMoreComment: reason.length > 60,

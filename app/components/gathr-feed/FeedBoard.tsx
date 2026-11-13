@@ -36,6 +36,7 @@ import {
   type GathrFilter,
 } from "./feedData";
 import AvatarIllustration from "../dashboard/AvatarIllustration";
+import UserAvatar from "../common/UserAvatar";
 import { ErrorState, InlineSpinner } from "../common/AsyncState";
 import {
   createComment,
@@ -86,22 +87,25 @@ const Avatar: React.FC<{ src?: string; size: number; className: string }> = ({
   src,
   size,
   className,
-}) =>
-  src ? (
-    <Image src={imageSrc(src)} alt="" width={size} height={size} className={className} />
-  ) : (
-    <span
-      className={className}
-      style={{
-        width: size,
-        height: size,
-        display: "inline-flex",
-        overflow: "hidden",
-      }}
-    >
-      <AvatarIllustration />
-    </span>
-  );
+}) => (
+  <UserAvatar
+    src={src}
+    imageClassName={className}
+    fallback={
+      <span
+        className={className}
+        style={{
+          width: size,
+          height: size,
+          display: "inline-flex",
+          overflow: "hidden",
+        }}
+      >
+        <AvatarIllustration />
+      </span>
+    }
+  />
+);
 
 const PostPhotos: React.FC<{
   images: string[];
@@ -1486,7 +1490,7 @@ export const FeedBoard: React.FC = () => {
                     onClick={() => openProfile(post.userId)}
                   >
                     <Avatar
-                      src={imageSrc(post.avatarUrl)}
+                      src={post.avatarUrl}
                       size={40}
                       className={styles.avatar}
                     />

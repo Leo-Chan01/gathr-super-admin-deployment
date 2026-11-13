@@ -14,7 +14,7 @@ import {
   Search,
   X,
 } from "lucide-react";
-import AvatarIllustration from "../dashboard/AvatarIllustration";
+import UserAvatar from "../common/UserAvatar";
 import avatarStyles from "../dashboard/AvatarIllustration.module.css";
 import KYCDetailDrawer from "../dashboard/KYCDetailDrawer";
 import MetricCards from "../dashboard/MetricCards";
@@ -646,6 +646,15 @@ const EmptyRow: React.FC<{ colSpan: number; text?: string }> = ({
   </tr>
 );
 
+/** Compact table avatar; the illustration shows when the user has none. */
+const RowAvatar: React.FC<{ src?: string }> = ({ src }) => (
+  <UserAvatar
+    src={src}
+    className={avatarStyles.compact}
+    imageClassName={styles.rowAvatar}
+  />
+);
+
 interface UserTableProps {
   rows: UserRow[];
   loading: boolean;
@@ -686,7 +695,12 @@ const IndividualsTable: React.FC<UserTableProps> = ({
       {rows.map((user, index) => (
         <tr key={user.id}>
           <td>{rowOffset + index + 1}</td>
-          <td className={styles.strong}>{user.name}</td>
+          <td>
+            <span className={styles.orgCell}>
+              <RowAvatar src={user.avatarUrl} />
+              <span className={styles.strong}>{user.name}</span>
+            </span>
+          </td>
           <td>{user.phone}</td>
           <td>{user.email}</td>
           <td>{user.joined}</td>
@@ -746,7 +760,7 @@ const OrganizationsTable: React.FC<UserTableProps> = ({
           <td>{rowOffset + index + 1}</td>
           <td>
             <span className={styles.orgCell}>
-              <AvatarIllustration className={avatarStyles.compact} />
+              <RowAvatar src={org.avatarUrl} />
               <span className={styles.strong}>{org.name}</span>
             </span>
           </td>
@@ -823,7 +837,7 @@ const PendingTable: React.FC<{
             <td>{rowOffset + index + 1}</td>
             <td>
               <span className={styles.orgCell}>
-                <AvatarIllustration className={avatarStyles.compact} />
+                <RowAvatar src={org.details?.imageUrl} />
                 <span className={styles.strong}>{org.name}</span>
               </span>
             </td>

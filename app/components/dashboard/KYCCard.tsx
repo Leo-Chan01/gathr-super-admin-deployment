@@ -2,7 +2,7 @@
 
 import React from "react";
 import { ChevronRight } from "lucide-react";
-import AvatarIllustration from "./AvatarIllustration";
+import UserAvatar from "../common/UserAvatar";
 import styles from "./KYCCard.module.css";
 
 export interface KYCDocument {
@@ -60,7 +60,7 @@ export const KYCCard: React.FC<KYCCardProps> = ({ item, onClick }) => {
     <div onClick={onClick} className={styles.card}>
       {/* Top Header */}
       <div className={styles.header}>
-        <AvatarIllustration />
+        <UserAvatar src={item.details?.imageUrl} alt={item.name} />
         <div className={styles.headerInfo}>
           <h3 className={styles.title}>{item.name}</h3>
           <div className={styles.metaRow}>

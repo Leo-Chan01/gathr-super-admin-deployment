@@ -9,7 +9,7 @@ import {
   Heart,
   MessageCircle,
 } from "lucide-react";
-import AvatarIllustration from "../dashboard/AvatarIllustration";
+import UserAvatar from "../common/UserAvatar";
 import { ErrorState, InlineSpinner } from "../common/AsyncState";
 import { getUser, updateUserStatus } from "../../lib/api/admin";
 import { accountStatus, timeAgo, toUserDetail } from "../../lib/api/adapters";
@@ -145,12 +145,7 @@ export const UserDetail: React.FC<{ id: string }> = ({ id }) => {
             )}
             <div className={styles.head}>
               <div className={styles.identity}>
-                {avatar ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={imageSrc(avatar)} alt="" className={styles.avatar} />
-                ) : (
-                  <AvatarIllustration />
-                )}
+                <UserAvatar src={avatar} imageClassName={styles.avatar} />
                 <div className={styles.identityText}>
                   <h1 className={styles.name}>{detail.name}</h1>
                   <p className={styles.sub}>

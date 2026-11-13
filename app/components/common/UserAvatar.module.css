@@ -1,0 +1,18 @@
+/* Matches the AvatarIllustration footprint so swapping between them is seamless. */
+.image {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
+  background-color: #faf7eb;
+}
+
+@media (min-width: 640px) {
+  .image {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+  }
+}
